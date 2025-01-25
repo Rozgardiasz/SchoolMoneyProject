@@ -5,8 +5,8 @@ from sqlalchemy.exc import NoResultFound
 from models import User
 
 
-def create_user(db: Session, name: str, email: str, hashed_password: str, role: str) -> User:
-    db_user = User(name=name, email=email, hashed_password=hashed_password, role=role)
+def create_user(db: Session, name: str, email: str, hashed_password: str) -> User:
+    db_user = User(name=name, email=email, hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -17,13 +17,12 @@ def get_user(db: Session, user_id: int) -> User:
     return db.query(User).filter(User.id == user_id).first()
 
 # Update a User's details
-def update_user(db: Session, user_id: int, name: str, email: str, hashed_password: str, role: str) -> User:
+def update_user(db: Session, user_id: int, name: str, email: str, hashed_password: str) -> User:
     db_user = db.query(User).filter(User.id == user_id).first()
     if db_user:
         db_user.name = name
         db_user.email = email
         db_user.hashed_password = hashed_password
-        db_user.role = role
         db.commit()
         db.refresh(db_user)
         return db_user

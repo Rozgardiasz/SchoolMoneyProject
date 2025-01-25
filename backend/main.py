@@ -40,7 +40,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Create the user with hashed password
     hashed_password = hash_password(user.password)
     db_user = User(
-        name=user.name, email=user.email, hashed_password=hashed_password, role=user.role
+        name=user.name, email=user.email, hashed_password=hashed_password
     )
     db.add(db_user)
     db.commit()
