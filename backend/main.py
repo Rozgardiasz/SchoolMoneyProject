@@ -3,6 +3,7 @@ from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 import CRUD.child
@@ -13,6 +14,15 @@ from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse
     ClassCreate, ChildModify, ClassModify
 
 app = FastAPI(debug=True)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"],  
+)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 from database import engine, SessionLocal
@@ -130,7 +140,7 @@ def create_class(
         current_user: User = Depends(get_current_user)
 ):
     # Create the class
-    db_class = Class(name=class_data.name, school_name=class_data.school_name, treasurer_id=current_user.id)
+    db_class = Class(name=class_data.name, treasurer_id=current_user.id)
 
     # Add the current user to the class by creating a membership
     class_membership = ClassMembership(parent_id=current_user.id, class_id=db_class.id)

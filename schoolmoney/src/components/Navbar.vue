@@ -9,16 +9,20 @@
   
   <script>
   import { useRoute, useRouter } from 'vue-router';
+  import { clearToken } from '@/api/auth';
+  import { computed } from 'vue';
+
   
   export default {
     setup() {
       const route = useRoute();
       const router = useRouter();
   
-      const showLogout = route.name === 'Home';
+      const showLogout = computed(() => route.name === 'Home');
   
       const logout = () => {
         router.push('/');
+        clearToken;
       };
   
       return {
