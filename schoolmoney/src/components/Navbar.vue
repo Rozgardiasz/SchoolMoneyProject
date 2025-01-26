@@ -6,6 +6,7 @@
         <span>{{ userName }}</span>
 
         <svg
+          @click="moveToProfile"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -63,10 +64,15 @@ export default {
       clearToken();
     };
 
+    const moveToProfile = () => {
+      router.push("/profile");
+    };
+
     return {
       showLogout,
       userName,
       logout,
+      moveToProfile
     };
   },
 };
