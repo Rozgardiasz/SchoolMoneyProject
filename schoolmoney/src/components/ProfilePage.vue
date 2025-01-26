@@ -63,12 +63,8 @@
             <label for="birthDate" class="block text-gray-700 font-semibold mb-2">Data urodzenia (YYYY-MM-DD)</label>
             <input v-model="birthDateField" id="birthDate" type="date" required class="w-full p-2 border border-gray-300 rounded-md text-gray-800" />
           </div>
-          <div class="form-group mb-4">
-            <label for="avatar" class="block text-gray-700 font-semibold mb-2">URL awatara</label>
-            <input v-model="avatarField" id="avatar" type="text" class="w-full p-2 border border-gray-300 rounded-md text-gray-800" />
-          </div>
           <div class="modal-actions flex justify-between mt-6">
-            <button @click="addChild" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">Dodaj</button>
+            <button @click="addNewChild" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">Dodaj</button>
             <button @click="showAddChildModal = false" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">Anuluj</button>
           </div>
           <p v-if="errorMessage" class="error text-red-500 text-center mt-3">{{ errorMessage }}</p>
