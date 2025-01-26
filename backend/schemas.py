@@ -6,14 +6,16 @@ from sqlalchemy import DateTime
 
 
 class UserCreate(BaseModel):
-    name: str
+    first_name: str
+    last_name: str
     email: EmailStr
     password: str
 
 
 class UserResponse(BaseModel):
     id: int
-    name: str
+    first_name: str
+    last_name: str
     email: str
     created_at: datetime
 

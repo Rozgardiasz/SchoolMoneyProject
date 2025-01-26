@@ -40,7 +40,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Create the user with hashed password
     hashed_password = hash_password(user.password)
     db_user = User(
-        name=user.name, email=user.email, hashed_password=hashed_password
+        first_name=user.first_name, last_name=user.last_name , email=user.email, hashed_password=hashed_password
     )
     db.add(db_user)
     db.commit()
@@ -130,7 +130,7 @@ def create_class(
         current_user: User = Depends(get_current_user)
 ):
     # Create the class
-    db_class = Class(name=class_data.name, school_name=class_data.school_name, treasurer_id=current_user.id)
+    db_class = Class(name=class_data.name, treasurer_id=current_user.id)
 
     # Add the current user to the class by creating a membership
     class_membership = ClassMembership(parent_id=current_user.id, class_id=db_class.id)
