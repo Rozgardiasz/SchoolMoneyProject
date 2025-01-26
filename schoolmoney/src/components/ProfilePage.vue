@@ -1,71 +1,241 @@
+const addChild = async () => {
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (!newChild.value.first_name.trim() || !newChild.value.last_name.trim()) {
+    errorMessage.value = "Wszystkie pola muszą być wypełnione!";
+    return;
+  }
+
+  if (!datePattern.test(newChild.value.birth_date)) {
+    errorMessage.value = "Podaj datę w formacie YYYY-MM-DD!";
+    return;
+  }
+
+  errorMessage.value = "";
+  try {
+    const token = getToken();
+    const response = await axios.post(
+      "http://localhost:8000/children/",
+      { ...newChild.value },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    children.value.push(response.data);
+    resetForm();
+    showAddChildModal.value = false;
+  } catch (error) {
+    console.error("Błąd:", error);
+    errorMessage.value = "Wystąpił błąd podczas dodawania dziecka.";
+  }
+};
+Spróbuj tych zmian i sprawdź, czy problem ustąpi. Jeśli nadal występuje, podziel się wynikami debugowania (console.log).
+
+
+
+
+
+
+
+Powiedziałeś(-aś):
+Pomiń strukturę newChild i odwołuj się bezpośrednio do pól
+ChatGPT powiedział:
+ChatGPT
+Aby uprościć strukturę i odwoływać się bezpośrednio do pól, możesz usunąć newChild jako obiekt i zamiast tego zdefiniować osobne ref dla każdego pola. Oto jak można to zrobić:
+
+Poprawiona struktura
+Usuń obiekt newChild i zdefiniuj osobne ref dla każdego pola formularza:
+
+javascript
+Kopiuj
+Edytuj
+const firstNameField = ref("");
+const lastNameField = ref("");
+const birthDateField = ref("");
+const avatarField = ref("");
+Poprawione odwołania w szablonie
+W v-model przypisz te pola bezpośrednio:
+
+html
+Kopiuj
+Edytuj
+<input v-model="firstNameField" id="firstName" type="text" />
+<input v-model="lastNameField" id="lastName" type="text" />
+<input v-model="birthDateField" id="birthDate" type="date" required />
+<input v-model="avatarField" id="avatar" type="text" />
+Funkcja addChild
+Przekształć funkcję addChild, aby korzystała z bezpośrednich odniesień do pól:
+
+javascript
+Kopiuj
+Edytuj
+const addChild = async () => {
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (!firstNameField.value.trim() || !lastNameField.value.trim()) {
+    errorMessage.value = "Wszystkie pola muszą być wypełnione!";
+    return;
+  }
+
+  if (!datePattern.test(birthDateField.value)) {
+    errorMessage.value = "Podaj datę w formacie YYYY-MM-DD!";
+    return;
+  }
+
+  errorMessage.value = ""; // Resetowanie wiadomości o błędzie
+  try {
+    const token = getToken(); // Pobieranie tokena
+    const response = await axios.post(
+      "http://localhost:8000/children/",
+      {
+        first_name: firstNameField.value,
+        last_name: lastNameField.value,
+        birth_date: birthDateField.value,
+        avatar: avatarField.value || "https://i1.sndcdn.com/artworks-000675384715-epwfpn-t500x500.jpg",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // Dodanie tokena do nagłówków
+        },
+      }
+    );
+
+    // Jeśli dziecko zostało pomyślnie dodane, aktualizujemy listę dzieci
+    children.value.push(response.data);
+    resetForm();
+    showAddChildModal.value = false;
+  } catch (error) {
+    console.error("Błąd:", error);
+    if (error.response && error.response.status === 401) {
+      errorMessage.value =
+        "Błąd uwierzytelnienia. Upewnij się, że jesteś zalogowany.";
+    } else {
+      errorMessage.value = "Wystąpił błąd podczas dodawania dziecka.";
+    }
+  }
+};
+Funkcja resetForm
+Zresetuj wszystkie pola formularza:
+
+javascript
+Kopiuj
+Edytuj
+const resetForm = () => {
+  firstNameField.value = "";
+  lastNameField.value = "";
+  birthDateField.value = "";
+  avatarField.value = "";
+};
+Uaktualnione setup
+Upewnij się, że wszystkie pola i funkcje są zwrócone w setup:
+
+javascript
+Kopiuj
+Edytuj
+return {
+  firstName,
+  lastName,
+  email,
+  children,
+  showAddChildModal,
+  firstNameField,
+  lastNameField,
+  birthDateField,
+  avatarField,
+  errorMessage,
+  addChild,
+};
+Podsumowanie zmian w szablonie
+Oryginalne odwołania do newChild zastąp bezpośrednimi polami:
+html
+Kopiuj
+Edytuj
+<input v-model="firstNameField" id="firstName" type="text" />
+<input v-model="lastNameField" id="lastName" type="text" />
+<input v-model="birthDateField" id="birthDate" type="date" required />
+<input v-model="avatarField" id="avatar" type="text" />
+Po tych zmianach walidacja powinna działać poprawnie, a kod stanie się bardziej czytelny i prostszy w debugowaniu.
+
+
+
+
+
+
+
+Powiedziałeś(-aś):
+A teraz zwróć mi cały kod
+ChatGPT powiedział:
+ChatGPT
+Oto cały kod z wprowadzonymi zmianami, które usuwają obiekt newChild i odwołują się bezpośrednio do pól:
+
+vue
+Kopiuj
+Edytuj
 <template>
-    <div class="profile-page">
-      <div class="profile-header">
-        <h1>Profil użytkownika</h1>
+  <div class="profile-page">
+    <div class="profile-header">
+      <h1>Profil użytkownika</h1>
+    </div>
+    <div class="profile-info">
+      <div class="info-item">
+        <span class="label">Imię:</span>
+        <span class="value">{{ firstName }}</span>
       </div>
-      <div class="profile-info">
-        <div class="info-item">
-          <span class="label">Imię:</span>
-          <span class="value">{{ firstName }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Nazwisko:</span>
-          <span class="value">{{ lastName }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Email:</span>
-          <span class="value">{{ email }}</span>
-        </div>
+      <div class="info-item">
+        <span class="label">Nazwisko:</span>
+        <span class="value">{{ lastName }}</span>
       </div>
-      <div class="add-child">
-        <button @click="showAddChildModal = true">Dodaj dziecko</button>
-      </div>
-  
-      <div class="children-list">
-        <h2>Dzieci</h2>
-        <div v-if="children.length > 0">
-          <div v-for="child in children" :key="child.id" class="child-item">
-            <img :src="child.avatar || 'https://via.placeholder.com/50'" alt="Avatar" class="avatar" />
-            <div class="child-info">
-              <p><strong>Imię:</strong> {{ child.first_name }}</p>
-              <p><strong>Nazwisko:</strong> {{ child.last_name }}</p>
-              <p><strong>Data urodzenia:</strong> {{ child.birth_date }}</p>
-            </div>
-          </div>
-        </div>
-        <p v-else>Brak dzieci w systemie.</p>
-      </div>
-  
-      <!-- Modal dodawania dziecka -->
-      <div v-if="showAddChildModal" class="modal-overlay">
-        <div class="modal">
-          <div class="form-group">
-            <label for="firstName">Imię</label>
-            <input v-model="newChild.first_name" id="firstName" type="text" />
-          </div>
-          <div class="form-group">
-            <label for="lastName">Nazwisko</label>
-            <input v-model="newChild.last_name" id="lastName" type="text" />
-          </div>
-          <div class="form-group">
-            <label for="birthDate">Data urodzenia (YYYY-MM-DD)</label>
-            <input v-model="newChild.birth_date" id="birthDate" type="date" required />
-          </div>
-          <div class="form-group">
-            <label for="avatar">URL awatara</label>
-            <input v-model="newChild.avatar" id="avatar" type="text" />
-          </div>
-          <div class="modal-actions">
-            <button @click="addChild">Dodaj</button>
-            <button @click="showAddChildModal = false">Anuluj</button>
-          </div>
-          <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-        </div>
+      <div class="info-item">
+        <span class="label">Email:</span>
+        <span class="value">{{ email }}</span>
       </div>
     </div>
-  </template>
-  
-  <script>
+    <div class="add-child">
+      <button @click="showAddChildModal = true">Dodaj dziecko</button>
+    </div>
+
+    <div class="children-list">
+      <h2>Dzieci</h2>
+      <div v-if="children.length > 0">
+        <div v-for="child in children" :key="child.id" class="child-item">
+          <img :src="child.avatar || 'https://via.placeholder.com/50'" alt="Avatar" class="avatar" />
+          <div class="child-info">
+            <p><strong>Imię:</strong> {{ child.first_name }}</p>
+            <p><strong>Nazwisko:</strong> {{ child.last_name }}</p>
+            <p><strong>Data urodzenia:</strong> {{ child.birth_date }}</p>
+          </div>
+        </div>
+      </div>
+      <p v-else>Brak dzieci w systemie.</p>
+    </div>
+
+    <div v-if="showAddChildModal" class="modal-overlay">
+      <div class="modal">
+        <div class="form-group">
+          <label for="firstName">Imię</label>
+          <input v-model="firstNameField" id="firstName" type="text" />
+        </div>
+        <div class="form-group">
+          <label for="lastName">Nazwisko</label>
+          <input v-model="lastNameField" id="lastName" type="text" />
+        </div>
+        <div class="form-group">
+          <label for="birthDate">Data urodzenia (YYYY-MM-DD)</label>
+          <input v-model="birthDateField" id="birthDate" type="date" required />
+        </div>
+        <div class="form-group">
+          <label for="avatar">URL awatara</label>
+          <input v-model="avatarField" id="avatar" type="text" />
+        </div>
+        <div class="modal-actions">
+          <button @click="addChild">Dodaj</button>
+          <button @click="showAddChildModal = false">Anuluj</button>
+        </div>
+        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import { getUserFirstName, getUserLastName, getUserEmail } from "@/api/user";
@@ -79,12 +249,12 @@ export default {
 
     const children = ref([]);
     const showAddChildModal = ref(false);
-    const newChild = ref({
-      first_name: "",
-      last_name: "",
-      birth_date: "",
-      avatar: "",
-    });
+
+    const firstNameField = ref("");
+    const lastNameField = ref("");
+    const birthDateField = ref("");
+    const avatarField = ref("");
+
     const errorMessage = ref("");
 
     const fetchChildren = async () => {
@@ -104,37 +274,36 @@ export default {
     };
 
     const addChild = async () => {
-      // Walidacja - upewniamy się, że data jest w formacie YYYY-MM-DD
       const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-      if (!newChild.first_name || !newChild.last_name || !newChild.birth_date) {
+
+      if (!firstNameField.value.trim() || !lastNameField.value.trim()) {
         errorMessage.value = "Wszystkie pola muszą być wypełnione!";
         return;
       }
 
-      if (!datePattern.test(newChild.birth_date)) {
+      if (!datePattern.test(birthDateField.value)) {
         errorMessage.value = "Podaj datę w formacie YYYY-MM-DD!";
         return;
       }
 
       errorMessage.value = ""; // Resetowanie wiadomości o błędzie
       try {
-        const token = getToken(); // Pobieranie tokena
+        const token = getToken();
         const response = await axios.post(
           "http://localhost:8000/children/",
           {
-            first_name: newChild.first_name,
-            last_name: newChild.last_name,
-            birth_date: newChild.birth_date,
-            avatar: newChild.avatar || 'https://i1.sndcdn.com/artworks-000675384715-epwfpn-t500x500.jpg', // Pole opcjonalne
+            first_name: firstNameField.value,
+            last_name: lastNameField.value,
+            birth_date: birthDateField.value,
+            avatar: avatarField.value || "https://i1.sndcdn.com/artworks-000675384715-epwfpn-t500x500.jpg",
           },
           {
             headers: {
-              Authorization: `Bearer ${token}`, // Dodanie tokena do nagłówków
+              Authorization: `Bearer ${token}`,
             },
           }
         );
 
-        // Jeśli dziecko zostało pomyślnie dodane, aktualizujemy listę dzieci
         children.value.push(response.data);
         resetForm();
         showAddChildModal.value = false;
@@ -150,12 +319,10 @@ export default {
     };
 
     const resetForm = () => {
-      newChild.value = {
-        first_name: "",
-        last_name: "",
-        birth_date: "",
-        avatar: "",
-      };
+      firstNameField.value = "";
+      lastNameField.value = "";
+      birthDateField.value = "";
+      avatarField.value = "";
     };
 
     onMounted(() => {
@@ -168,7 +335,10 @@ export default {
       email,
       children,
       showAddChildModal,
-      newChild,
+      firstNameField,
+      lastNameField,
+      birthDateField,
+      avatarField,
       errorMessage,
       addChild,
     };
