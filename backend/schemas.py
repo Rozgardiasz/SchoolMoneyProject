@@ -74,9 +74,7 @@ class ClassResponse(BaseModel):
 
 
 class ClassCreate(BaseModel):
-    id: int
     name: str
-    treasurer_id: int
 
     class Config:
         orm_mode = True
