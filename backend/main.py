@@ -141,17 +141,21 @@ def create_class(
 ):
     # Create the class
     db_class = Class(name=class_data.name, treasurer_id=current_user.id)
+    db.add(db_class)
+
+    # Commit the transaction to save the class and generate its ID
+    db.commit()
+    db.refresh(db_class)
+
 
     # Add the current user to the class by creating a membership
     class_membership = ClassMembership(parent_id=current_user.id, class_id=db_class.id)
 
     # Add the class and class membership to the session
-    db.add(db_class)
     db.add(class_membership)
 
     # Commit the transaction to save both the class and membership
     db.commit()
-    db.refresh(db_class)
 
     return db_class
 
