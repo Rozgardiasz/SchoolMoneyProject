@@ -21,6 +21,7 @@
         >
           Zaloguj się
         </button>
+        <p v-if="errorMessage" class="text-center text-sm text-red-500">{{ errorMessage }}</p>
         <p class="text-center text-sm text-gray-500">Nie masz konta?</p>
         <button
           @click="handleRegister"
@@ -36,15 +37,24 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { login, setToken } from '@/api/auth';
 
 export default {
   setup() {
     const email = ref('');
     const password = ref('');
+    const errorMessage = ref('');
     const router = useRouter();
 
-    const handleLogin = () => {
-      router.push('/home');
+    const handleLogin = async () => {
+      errorMessage.value = '';
+      try {
+        const data = await login(email.value, password.value);
+        setToken(data.access_token);
+        router.push('/home');
+      } catch (error) {
+        errorMessage.value = error.message;
+      }
     };
 
     const handleRegister = () => {
@@ -54,8 +64,9 @@ export default {
     return {
       email,
       password,
+      errorMessage,
       handleLogin,
-      handleRegister
+      handleRegister,
     };
   },
 };
@@ -66,4 +77,3 @@ export default {
   min-height: 100vh;
 }
 </style>
-

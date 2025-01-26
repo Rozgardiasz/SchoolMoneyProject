@@ -3,6 +3,7 @@ from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 import CRUD.child
@@ -13,6 +14,15 @@ from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse
     ClassCreate, ChildModify, ClassModify
 
 app = FastAPI(debug=True)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"],  
+)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 from database import engine, SessionLocal
