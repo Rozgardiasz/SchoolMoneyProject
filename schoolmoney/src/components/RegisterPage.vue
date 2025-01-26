@@ -62,7 +62,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { registerUser, login } from '@/api/auth'; 
+import { registerUser, login, fetchUserDetails } from '@/api/auth'; 
 
 export default {
   setup() {
@@ -110,12 +110,14 @@ export default {
 
       try {
         await registerUser(
-          `${firstName.value} ${lastName.value}`,
+          firstName.value, 
+          lastName.value,
           email.value,
           password.value
         );
         const loginResponse = await login(email.value, password.value);
         if (loginResponse) {
+          fetchUserDetails(loginResponse.access_token);
           router.push('/home');
         }
       } catch (error) {

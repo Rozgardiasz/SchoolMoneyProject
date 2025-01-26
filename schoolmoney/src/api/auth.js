@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { setUserId, setUserName, setUserEmail } from './user';
 
 const API_URL = 'http://localhost:8000';
 
@@ -18,10 +19,32 @@ export const login = async (email, password) => {
   }
 };
 
-export const registerUser = async (name, email, password) => {
+export const fetchUserDetails = async (token) => {
+  try {
+    const userResponse = await axios.get(`${API_URL}/me/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const { id, first_name, last_name, email: userEmail } = userResponse.data;
+
+    setUserId(id);
+    setUserName(first_name, last_name);
+    setUserEmail(userEmail);
+
+    return userResponse.data;
+  } catch (error) {
+    throw new Error('Wystąpił błąd podczas pobierania danych użytkownika');
+  }
+};
+
+
+export const registerUser = async (first_name, last_name, email, password) => {
     try {
       const response = await axios.post(`${API_URL}/register/`, {
-        name,
+        first_name,
+        last_name,
         email,
         password,
       });

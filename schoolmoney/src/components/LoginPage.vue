@@ -37,7 +37,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { login, setToken } from '@/api/auth';
+import { login, setToken, fetchUserDetails } from '@/api/auth';
 
 export default {
   setup() {
@@ -51,6 +51,7 @@ export default {
       try {
         const data = await login(email.value, password.value);
         setToken(data.access_token);
+        fetchUserDetails(data.access_token);
         router.push('/home');
       } catch (error) {
         errorMessage.value = error.message;

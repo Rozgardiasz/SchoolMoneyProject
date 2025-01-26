@@ -24,7 +24,7 @@ export const fetchClasses = async (token) => {
 };
 
 
-export const createClass = async (token, class_name, creator_id) => {
+export const createClass = async (token, class_name) => {
   try {
     if (!token) {
       throw new Error('Brak tokenu autoryzacyjnego');
@@ -33,7 +33,7 @@ export const createClass = async (token, class_name, creator_id) => {
     const newClass = {
       id: 0,  
       name: class_name,  
-      treasurer_id: creator_id, 
+      treasurer_id: 0, 
     };
 
     const response = await axios.post(`${API_URL}/class/`, newClass, {
