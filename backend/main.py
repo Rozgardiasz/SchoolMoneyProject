@@ -71,6 +71,19 @@ def login(user: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@app.get("/get_user/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    # Query the database for the user with the given ID
+    user = db.query(User).filter(User.id == user_id).first()
+
+    # If user is not found, raise an HTTP exception
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Return the user data
+    return user
+
+
 # Dependency to get the current logged-in user
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = decode_access_token(token)
