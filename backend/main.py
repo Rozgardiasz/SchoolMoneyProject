@@ -5,6 +5,7 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 import CRUD.child
@@ -199,7 +200,8 @@ def create_class(
 @app.get("/user_classes/", response_model=List[ClassResponse])
 def get_user_classes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Join Class with Child to get the classes where the parent has a child
-    return db.query(Class).join(Child).filter(Child.parent_id == current_user.id).all()
+    return db.query(Class).join(Child, Child.class_id == Class.id, isouter=True).filter(
+        or_(Child.parent_id == current_user.id, Class.treasurer_id == current_user.id)).all()
 
 
 @app.get("/all_classes", response_model=List[ClassResponse])
