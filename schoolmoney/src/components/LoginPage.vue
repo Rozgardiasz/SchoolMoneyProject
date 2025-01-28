@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-gray-100">
+  <div class="flex items-center justify-center min-h-screen">
     <div class="max-w-md w-full p-6 rounded-2xl shadow-lg bg-white">
       <h2 class="text-2xl font-bold text-center mb-4">Logowanie</h2>
       <div class="space-y-4">
@@ -51,7 +51,7 @@ export default {
       try {
         const data = await login(email.value, password.value);
         setToken(data.access_token);
-        fetchUserDetails(data.access_token);
+        await fetchUserDetails(data.access_token);
         router.push('/home');
       } catch (error) {
         errorMessage.value = error.message;

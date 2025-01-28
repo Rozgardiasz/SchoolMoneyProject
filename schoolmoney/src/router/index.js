@@ -3,6 +3,8 @@ import LoginScreen from '@/components/LoginPage.vue';
 import Home from '@/components/HomePage.vue';
 import Register from '@/components/RegisterPage.vue';
 import Profile from '@/components/ProfilePage.vue'
+import ClassPage from '@/components/ClassPage.vue'
+
 
 const routes = [
   {
@@ -24,6 +26,11 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: Profile,
+  },
+  {
+    path: '/class/:classItem',
+    name: 'ClassPage',
+    component: ClassPage,
   },
 ];
 
