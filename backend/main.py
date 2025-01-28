@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 from typing import List
 
@@ -11,7 +12,7 @@ import models
 from auth import verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, decode_access_token, hash_password
 from models import *
 from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse, ChildCreate, ClassResponse, \
-    ClassCreate, ChildModify, ClassModify, AddChildToClass
+    ClassCreate, ChildModify, ClassModify, AddChildToClass, CollectionResponse, CollectionCreate, AccountResponse
 
 app = FastAPI(debug=True)
 
@@ -55,7 +56,26 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+
+    account_number = str(uuid.uuid4())  # Example: Unique identifier
+    account = Account(
+        account_number=account_number,
+        balance=100.0,  # Initial balance is set to 0
+        parent_id=db_user.id  # Link the account to the newly created user
+    )
+
+    # Step 5: Add the account to the database and commit
+    db.add(account)
+    db.commit()
+    db.refresh(account)  # To get the latest data (e.g., auto-generated id)
+    return UserResponse(
+        id=user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=user.email,
+        profile_picture=user.profile_picture,
+        account=AccountResponse.from_orm(account)  # Return AccountResponse instead of plain account
+    )
 
 
 # Login route to generate JWT token
@@ -81,7 +101,14 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     # Return the user data
-    return user
+    return UserResponse(
+        id=user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=user.email,
+        profile_picture=user.profile_picture,
+        account=AccountResponse.from_orm(user.account)  # Convert related account to AccountResponse
+    )
 
 
 # Dependency to get the current logged-in user
@@ -101,8 +128,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 # Protected route that requires a valid token
 @app.get("/me/", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
-
+    return UserResponse(
+        id=current_user.id,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        email=current_user.email,
+        profile_picture=current_user.profile_picture,
+        account=AccountResponse.from_orm(current_user.account)  # Convert related account to AccountResponse
+    )
 
 @app.post("/children/", response_model=ChildResponse)
 def create_child(
@@ -209,10 +242,16 @@ def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(ge
             .first()
     )
     if not is_treasurer:
-        raise HTTPException(400,
-                            "obecny uzytkownik nie jest skarbnikiem w zadnej klasie. Tylko skarbnik moze widziec wszystkich uzytkownikow")
+        raise HTTPException(
+            status_code=403,  # Forbidden instead of Bad Request
+            detail="Obecny użytkownik nie jest skarbnikiem w żadnej klasie. Tylko skarbnik może widzieć wszystkich użytkowników."
+        )
 
-    return db.query(User).filter(User.id != current_user.id).all()
+    # Get all users except the current one
+    users = db.query(User).filter(User.id != current_user.id).all()
+
+    # Return the list of users as UserResponse models
+    return [UserResponse.from_orm(user) for user in users]
 
 @app.post("/add_child_to_class/")
 def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -233,6 +272,61 @@ def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), 
 
     # Return the updated child object
     return child
+
+
+@app.post("/create_collection/", response_model=CollectionResponse)
+def create_collection(
+        collection : CollectionCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    # Step 1: Validate if the current user is a treasurer for the given class
+    class_ = db.query(Class).filter(Class.id == collection.class_id).first()
+    if not class_:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    if class_.treasurer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to create collections for this class")
+
+    # Step 2: Create the new collection
+    collection = Collection(
+        title=collection.title,
+        description=collection.description,
+        start_date=collection.start_date,
+        end_date=collection.end_date,
+        class_id=collection.class_id,
+        creator_id=current_user.id  # Set the creator to the current user
+    )
+
+    # Step 3: Add the collection to the database and commit
+    db.add(collection)
+    db.commit()
+    db.refresh(collection)  # To get the latest data (e.g., auto-generated id)
+
+
+    account_number = str(uuid.uuid4())  # Example: Unique identifier
+    account = Account(
+        account_number=account_number,
+        balance=0.0,  # Initial balance is set to 0
+        collection_id=collection.id  # Link the account to the newly created collection
+    )
+
+    # Step 5: Add the account to the database and commit
+    db.add(account)
+    db.commit()
+    db.refresh(account)  # To get the latest data (e.g., auto-generated id)
+
+    # Step 4: Return the created collection
+    return CollectionResponse(
+        id=collection.id,
+        title=collection.title,
+        description=collection.description,
+        start_date=collection.start_date,
+        end_date=collection.end_date,
+        class_id=collection.class_id,
+        creator_id=collection.creator_id,
+        account=AccountResponse.from_orm(account)  # Return AccountResponse instead of plain account
+    )
 
 if __name__ == "main":
     # Initialize the database

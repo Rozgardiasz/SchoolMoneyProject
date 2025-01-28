@@ -4,6 +4,17 @@ from typing import Optional
 
 from sqlalchemy import DateTime
 
+class AccountResponse(BaseModel):
+    id: int
+    account_number: str
+    balance: float
+
+    class Config:
+        orm_mode = True  # This allows pydantic to work with ORM models like SQLAlchemy
+        from_attributes = True
+
+
+
 
 class UserCreate(BaseModel):
     first_name: str
@@ -18,9 +29,11 @@ class UserResponse(BaseModel):
     last_name: str
     email: str
     created_at: datetime
+    account : AccountResponse
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 
 class LoginRequest(BaseModel):
@@ -43,6 +56,7 @@ class ChildResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 
 class ChildCreate(BaseModel):
@@ -53,6 +67,7 @@ class ChildCreate(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 
 class ChildModify(BaseModel):
@@ -72,6 +87,7 @@ class ClassResponse(BaseModel):
 
     class Config:
         orm_mode = True  # Allows Pydantic to work with SQLAlchemy models
+        from_attributes = True
 
 
 class ClassCreate(BaseModel):
@@ -79,12 +95,14 @@ class ClassCreate(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 
 class ClassModify(BaseModel):
     name : str
     class Config:
         orm_mode = True
+        from_attributes = True
 
 
 class AddChildToClass(BaseModel):
@@ -92,3 +110,36 @@ class AddChildToClass(BaseModel):
     class_id: int
     class Config:
         orm_mode = True
+        from_attributes = True
+
+
+# Request schema to create a collection
+class CollectionCreate(BaseModel):
+    title: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    class_id: int
+
+    class Config:
+        orm_mode = True  # This allows us to work with ORM models directly
+        from_attributes = True
+
+
+
+
+# Response schema to return created collection
+class CollectionResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    class_id: int
+    creator_id: int
+    account : AccountResponse
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
