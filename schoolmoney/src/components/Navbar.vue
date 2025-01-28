@@ -1,10 +1,16 @@
 <template>
-  <div class="navbar">
-    <div class="left">SchoolMoney</div>
-    <div class="right" v-if="showLogout">
-      <div class="profile">
+  <div class="flex justify-between items-center px-5 py-3 bg-white border-b shadow">
+    <div class="flex items-center gap-2 cursor-pointer" @click="moveToHome">
+      <img
+        :src="logo"
+        alt="SchoolMoney Logo"
+        class="w-8 h-8 object-contain"
+      />
+      <div class="text-lg font-bold text-gray-800">SchoolMoney</div>
+    </div>
+    <div class="flex items-center gap-3" v-if="showLogout">
+      <div class="flex items-center gap-2 text-gray-800">
         <span>{{ userName }}</span>
-
         <svg
           @click="moveToProfile"
           xmlns="http://www.w3.org/2000/svg"
@@ -12,7 +18,7 @@
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
-          class="w-6 h-6 profile-icon"
+          class="w-6 h-6 cursor-pointer"
         >
           <path
             stroke-linecap="round"
@@ -28,8 +34,7 @@
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="w-6 h-6 logout-icon cursor-pointer"
-        style="transform: rotate(0deg);"
+        class="w-6 h-6 cursor-pointer"
       >
         <path
           stroke-linecap="round"
@@ -41,87 +46,45 @@
   </div>
 </template>
 
-
 <script>
 import { useRoute, useRouter } from "vue-router";
 import { clearToken } from "@/api/auth";
-import { getUserFirstName, getUserLastName } from "@/api/user";
+import { clearUserData, getUserFirstName, getUserLastName } from "@/api/user";
 import { computed } from "vue";
+import logoPng from "../assets/Logo_png.png"; 
 
 export default {
   setup() {
     const route = useRoute();
     const router = useRouter();
 
-    const showLogout = computed(() => route.name === "Home");
+    const showLogout = computed(() => route.name === "Home" || route.name === "Profile" || route.name === "ClassPage");
     const userName = computed(
       () => `${getUserFirstName() || ""} ${getUserLastName() || ""}`.trim()
     );
 
-
     const logout = () => {
       router.push("/");
       clearToken();
+      clearUserData(); // Fixed function call
     };
 
     const moveToProfile = () => {
       router.push("/profile");
     };
 
+    const moveToHome = () => {
+      router.push("/Home");
+    };
+
     return {
+      logo: logoPng, // Add logo to the returned setup object
       showLogout,
       userName,
       logout,
-      moveToProfile
+      moveToProfile,
+      moveToHome,
     };
   },
 };
 </script>
-
-<style scoped>
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #eaeaea;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.left {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  color: #333333;
-}
-
-.profile-icon {
-  width: 24px;
-  height: 24px;
-}
-
-.right button {
-  background-color: transparent;
-  border: none;
-  color: #007bff;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.right button:hover {
-  text-decoration: underline;
-}
-</style>

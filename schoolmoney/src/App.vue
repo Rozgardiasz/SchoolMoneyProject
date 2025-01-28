@@ -20,6 +20,6 @@ export default {
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #f7fafc;
+  background-color: #97c2b7;
 }
 </style>

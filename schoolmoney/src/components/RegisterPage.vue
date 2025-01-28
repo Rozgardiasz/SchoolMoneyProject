@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-gray-100">
+  <div class="flex items-center justify-center min-h-screen ">
     <div class="max-w-md w-full p-6 rounded-2xl shadow-lg bg-white">
       <h2 class="text-2xl font-bold text-center mb-4">Rejestracja</h2>
       <div class="space-y-4">
@@ -117,7 +117,8 @@ export default {
         );
         const loginResponse = await login(email.value, password.value);
         if (loginResponse) {
-          fetchUserDetails(loginResponse.access_token);
+          setToken(loginResponse.access_token);
+          await fetchUserDetails(loginResponse.access_token);
           router.push('/home');
         }
       } catch (error) {
