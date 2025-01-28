@@ -69,11 +69,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(account)  # To get the latest data (e.g., auto-generated id)
     return UserResponse(
-        id=user.id,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        email=user.email,
-        profile_picture=user.profile_picture,
+        id=db_user.id,
+        first_name=db_user.first_name,
+        last_name=db_user.last_name,
+        email=db_user.email,
+        created_at = db_user.created_at,
         account=AccountResponse.from_orm(account)  # Return AccountResponse instead of plain account
     )
 
@@ -106,7 +106,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         first_name=user.first_name,
         last_name=user.last_name,
         email=user.email,
-        profile_picture=user.profile_picture,
+        created_at = user.created_at,
         account=AccountResponse.from_orm(user.account)  # Convert related account to AccountResponse
     )
 
@@ -133,7 +133,7 @@ def read_users_me(current_user: User = Depends(get_current_user)):
         first_name=current_user.first_name,
         last_name=current_user.last_name,
         email=current_user.email,
-        profile_picture=current_user.profile_picture,
+        created_at = current_user.created_at,
         account=AccountResponse.from_orm(current_user.account)  # Convert related account to AccountResponse
     )
 
