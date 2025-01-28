@@ -11,7 +11,7 @@ import models
 from auth import verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, decode_access_token, hash_password
 from models import *
 from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse, ChildCreate, ClassResponse, \
-    ClassCreate, ChildModify, ClassModify
+    ClassCreate, ChildModify, ClassModify, AddChildToClass
 
 app = FastAPI(debug=True)
 
@@ -158,25 +158,15 @@ def create_class(
 
     # Commit the transaction to save the class and generate its ID
     db.commit()
-    db.refresh(db_class)
 
-
-    # Add the current user to the class by creating a membership
-    class_membership = ClassMembership(parent_id=current_user.id, class_id=db_class.id)
-
-    # Add the class and class membership to the session
-    db.add(class_membership)
-
-    # Commit the transaction to save both the class and membership
-    db.commit()
 
     return db_class
 
 
 @app.get("/user_classes/", response_model=List[ClassResponse])
 def get_user_classes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Join ClassMembership with Class to get the classes the current user belongs to
-    return db.query(Class).join(ClassMembership).filter(ClassMembership.parent_id == current_user.id).all()
+    # Join Class with Child to get the classes where the parent has a child
+    return db.query(Class).join(Child).filter(Child.parent_id == current_user.id).all()
 
 
 @app.get("/all_classes", response_model=List[ClassResponse])
@@ -214,7 +204,7 @@ def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(ge
     # Check if the current user is a treasurer of any class
     is_treasurer = (
         db.query(Class)
-            .join(ClassMembership, Class.id == ClassMembership.class_id)
+            .join(User)
             .filter(Class.treasurer_id == current_user.id)
             .first()
     )
@@ -224,6 +214,25 @@ def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(ge
 
     return db.query(User).filter(User.id != current_user.id).all()
 
+@app.post("/add_child_to_class/")
+def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Validate if the child belongs to the current user
+    child = db.query(Child).filter(Child.id == params.child_id, Child.parent_id == current_user.id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child does not belong to the current user")
+
+    # Validate if the class exists
+    class_ = db.query(Class).filter(Class.id == params.class_id).first()
+    if not class_:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    # Assign the child to the class
+    child.class_id = class_.id  # Set the class_id to link the child to the class
+    db.commit()  # Commit the changes to the database
+    db.refresh(child)
+
+    # Return the updated child object
+    return child
 
 if __name__ == "main":
     # Initialize the database

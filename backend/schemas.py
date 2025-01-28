@@ -38,6 +38,7 @@ class ChildResponse(BaseModel):
     first_name: str
     last_name: str
     birth_date: date
+    class_id: int|None = None
     avatar: str | None = None
 
     class Config:
@@ -82,3 +83,12 @@ class ClassCreate(BaseModel):
 
 class ClassModify(BaseModel):
     name : str
+    class Config:
+        orm_mode = True
+
+
+class AddChildToClass(BaseModel):
+    child_id: int
+    class_id: int
+    class Config:
+        orm_mode = True

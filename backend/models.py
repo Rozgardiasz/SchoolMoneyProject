@@ -32,8 +32,8 @@ class User(Base):
     # Relationships
     children = relationship("Child", back_populates="parent")
     classes_managed = relationship("Class", back_populates="treasurer")
-    memberships = relationship("ClassMembership", back_populates="parent")
     created_collections = relationship("Collection", back_populates="creator")
+    account = relationship("Account", back_populates="parent", uselist=False)
 
 # Child model
 class Child(Base):
@@ -49,34 +49,23 @@ class Child(Base):
     parent_id = Column(Integer, ForeignKey("users.id"))
     parent = relationship("User", back_populates="children")
 
-    # Relationships
-    accounts = relationship("Account", back_populates="child")
+    # Foreign key to class
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    class_ = relationship("Class", back_populates="children")
 
-# Class model
 class Class(Base):
     __tablename__ = "classes"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    treasurer_id = Column(Integer, ForeignKey("users.id"))  # Managed by Skarbnik
+    treasurer_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Managed by the treasurer
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     treasurer = relationship("User", back_populates="classes_managed")
-    memberships = relationship("ClassMembership", back_populates="class_")
     collections = relationship("Collection", back_populates="class_")
+    children = relationship("Child", back_populates="class_")  # One-to-many relationship with children
 
-# ClassMembership model
-class ClassMembership(Base):
-    __tablename__ = "class_memberships"
-
-    id = Column(Integer, primary_key=True, index=True)
-    parent_id = Column(Integer, ForeignKey("users.id"))
-    class_id = Column(Integer, ForeignKey("classes.id"))
-
-    # Relationships
-    parent = relationship("User", back_populates="memberships")
-    class_ = relationship("Class", back_populates="memberships")
 
 # Account model
 class Account(Base):
@@ -86,25 +75,48 @@ class Account(Base):
     account_number = Column(String, unique=True, nullable=False)  # Unique account number
     balance = Column(Float, default=0.0)
 
-    # Foreign key to child
-    child_id = Column(Integer, ForeignKey("children.id"))
-    child = relationship("Child", back_populates="accounts")
+    # Foreign keys
+    parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Account owned by a parent
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=True)  # Account for a collection
 
-    # Add the relationship for transactions
-    transactions = relationship("FinancialTransaction", back_populates="account")
+    # Relationships
+    parent = relationship("User", back_populates="account")
+    collection = relationship("Collection", back_populates="account")
+
+    # Transactions where this account is source or destination
+    outgoing_transactions = relationship(
+        "FinancialTransaction",
+        back_populates="source_account",
+        primaryjoin="Account.id == FinancialTransaction.source_account_id",
+        foreign_keys="[FinancialTransaction.source_account_id]"
+    )
+
+    # Explicitly specifying the join condition for incoming transactions
+    incoming_transactions = relationship(
+        "FinancialTransaction",
+        back_populates="destination_account",
+        primaryjoin="Account.id == FinancialTransaction.destination_account_id",
+        foreign_keys="[FinancialTransaction.destination_account_id]"
+
+    )
+
 
 
 class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"))
-    amount = Column(Float, nullable=False)
-    transaction_type = Column(String, nullable=False)  # 'deposit' or 'withdrawal'
+    source_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)  # Account sending the funds
+    destination_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)  # Account receiving the funds
+    amount = Column(Float, nullable=False)  # Transaction amount
+    description = Column(Text, nullable=True)  # Optional description of the transaction
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    account = relationship("Account", back_populates="transactions")
+    source_account = relationship("Account", back_populates="outgoing_transactions",foreign_keys=[source_account_id])
+    destination_account = relationship("Account", back_populates="incoming_transactions",foreign_keys=[destination_account_id]
+)
+
 
 # Collection model
 class Collection(Base):
@@ -113,46 +125,15 @@ class Collection(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     logo = Column(String, nullable=True)  # Path to logo image
-    description = Column(Text, nullable=False)
+    description = Column(Text, nullable=False)  # Description provided by the treasurer
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
 
     # Foreign keys
-    class_id = Column(Integer, ForeignKey("classes.id"))
-    creator_id = Column(Integer, ForeignKey("users.id"))
+    class_id = Column(Integer, ForeignKey("classes.id"))  # Class this collection belongs to
+    creator_id = Column(Integer, ForeignKey("users.id"))  # Treasurer who created the collection
 
     # Relationships
     class_ = relationship("Class", back_populates="collections")
     creator = relationship("User", back_populates="created_collections")
-    contributions = relationship("Contribution", back_populates="collection")
-    payouts = relationship("Payout", back_populates="collection")
-
-# Contribution model
-class Contribution(Base):
-    __tablename__ = "contributions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    amount = Column(Float, nullable=False)
-    contributor_id = Column(Integer, ForeignKey("users.id"))
-    collection_id = Column(Integer, ForeignKey("collections.id"))
-    paid_for_child_id = Column(Integer, ForeignKey("children.id"))
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-    # Relationships
-    contributor = relationship("User")
-    collection = relationship("Collection", back_populates="contributions")
-    paid_for_child = relationship("Child")
-
-# Payout model
-class Payout(Base):
-    __tablename__ = "payouts"
-
-    id = Column(Integer, primary_key=True, index=True)
-    amount = Column(Float, nullable=False)
-    collection_id = Column(Integer, ForeignKey("collections.id"))
-    recipient_id = Column(Integer, ForeignKey("users.id"))
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-    # Relationships
-    collection = relationship("Collection", back_populates="payouts")
-    recipient = relationship("User")
+    account = relationship("Account", back_populates="collection", uselist=False)  # One account per collection
