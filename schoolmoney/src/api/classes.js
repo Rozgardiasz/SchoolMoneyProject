@@ -49,3 +49,27 @@ export const createClass = async (token, class_name) => {
     throw error;
   }
 };
+
+export const changeClassName = async (token, classId, newName) => {
+  try {
+    if (!token) {
+      throw new Error('Brak tokenu autoryzacyjnego');
+    }
+
+    const response = await axios.put(
+      `${API_URL}/class/${classId}`,
+      { name: newName },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log('response after updating:', response.data);
+
+    return response.data;
+  } catch (error) {
+    console.error('Błąd podczas zmiany nazwy klasy:', error);
+    throw error;
+  }
+};

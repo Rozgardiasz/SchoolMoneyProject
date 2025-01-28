@@ -6,7 +6,7 @@ export const setUserId = (id) => {
   };
   
   export const getUserId = () => {
-    return localStorage.getItem('user_id');
+    return Number(localStorage.getItem('user_id'));
   };
   
   export const setUserName = (firstName, lastName) => {
