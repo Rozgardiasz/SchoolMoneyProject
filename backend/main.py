@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 from typing import List
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -17,6 +18,7 @@ from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse
     FinancialTransactionCreate, FinancialTransactionResponse
 
 app = FastAPI(debug=True)
+scheduler = BackgroundScheduler()
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +43,53 @@ def get_db():
 
 def init_db():
     models.Base.metadata.create_all(bind=engine)
+
+from sqlalchemy.orm import Session
+from datetime import datetime
+from models import Collection, Account, FinancialTransaction
+from fastapi import HTTPException
+
+def transfer_funds_on_collection_end():
+    # Get the current date
+    current_date = datetime.utcnow()
+    db: Session = SessionLocal()
+
+
+    # Fetch all collections that have ended
+    collections_to_process = db.query(Collection).filter(Collection.end_date <= current_date).all()
+
+    for collection in collections_to_process:
+        # Ensure the collection has funds
+        if collection.account.balance > 0:
+            # Get the creator of the collection
+            creator_account = db.query(Account).filter(Account.user_id == collection.creator_id).first()
+
+            if not creator_account:
+                raise HTTPException(status_code=404, detail="Creator account not found")
+
+            # Get the amount to transfer
+            transfer_amount = collection.account.balance
+
+            # Transfer funds from the collection's account to the creator's account
+            # Create a financial transaction
+            transaction = FinancialTransaction(
+                source_account_id=collection.account.id,
+                destination_account_id=creator_account.id,
+                amount=transfer_amount,
+                description="Transfer of funds from collection to creator after collection end date",
+                timestamp=datetime.utcnow(),
+            )
+            db.add(transaction)
+            db.commit()
+
+            # Update collection account balance to zero
+            collection.account.balance = 0
+            db.commit()
+
+
+    return {"message": "Funds transfer process completed."}
+
+
 
 
 @app.post("/register/", response_model=UserResponse)
@@ -600,5 +649,14 @@ def transactions_for_collection(
 if __name__ == "main":
 
     init_db()
-
     print("Tables created successfully!")
+    scheduler.add_job(transfer_funds_on_collection_end, 'interval', minutes=1)
+
+    # Start the scheduler
+    scheduler.start()
+    print("scheduler started")
+
+
+@app.on_event("shutdown")
+def shutdown():
+    scheduler.shutdown()
