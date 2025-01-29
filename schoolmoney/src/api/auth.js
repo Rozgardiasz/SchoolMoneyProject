@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { setUserId, setUserName, setUserEmail } from './user';
+import { setUserId, setUserName, setUserEmail, setAccountNumber, setAccountBalance, setAccountID } from './user';
 
 const API_URL = 'http://localhost:8000';
 
@@ -27,17 +27,23 @@ export const fetchUserDetails = async (token) => {
       },
     });
 
-    const { id, first_name, last_name, email: userEmail } = userResponse.data;
+    const { id, first_name, last_name, email: userEmail, account } = userResponse.data;
+    const { id: account_id, account_number, balance } = account;
 
     setUserId(id);
     setUserName(first_name, last_name);
     setUserEmail(userEmail);
+    setAccountNumber(account_number);
+    setAccountBalance(balance);
+    setAccountID(account_id);
+    
 
     return userResponse.data;
   } catch (error) {
     throw new Error('Wystąpił błąd podczas pobierania danych użytkownika');
   }
 };
+
 
 
 export const registerUser = async (first_name, last_name, email, password) => {

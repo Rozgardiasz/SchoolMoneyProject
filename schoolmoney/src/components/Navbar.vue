@@ -58,7 +58,7 @@ export default {
     const route = useRoute();
     const router = useRouter();
 
-    const showLogout = computed(() => route.name === "Home" || route.name === "Profile" || route.name === "ClassPage");
+    const showLogout = computed(() => route.name === "Home" || route.name === "Profile" || route.name === "ClassPage" || route.name === "FoundRisePage");
     const userName = computed(
       () => `${getUserFirstName() || ""} ${getUserLastName() || ""}`.trim()
     );

@@ -16,8 +16,8 @@
       </svg>
 
       <div class="text-left">
-        <h1 class="text-3xl font-bold ">{{ classItem.name }}</h1>
-        <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurer_id }}</h2>
+        <h1 class="ml-7 text-3xl font-bold ">{{ classItem.name }}</h1>
+        <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurerName }}</h2>
       </div>
     </div>
 
@@ -51,6 +51,29 @@
         </ul>
       </div>
 
+
+      <div v-if="showAddForm" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
+      <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-xl font-semibold mb-4">Dodaj zbiórkę</h2>
+        <label class="block mb-2">Tytuł</label>
+        <input v-model="newFund.title" type="text" class="w-full p-2 border rounded mb-3">
+        
+        <label class="block mb-2">Opis</label>
+        <textarea v-model="newFund.description" class="w-full p-2 border rounded mb-3"></textarea>
+        
+        <label class="block mb-2">Data rozpoczęcia</label>
+        <input v-model="newFund.startDate" type="date" class="w-full p-2 border rounded mb-3">
+        
+        <label class="block mb-2">Data zakończenia</label>
+        <input v-model="newFund.endDate" type="date" class="w-full p-2 border rounded mb-3">
+
+        <div class="flex justify-end space-x-3 mt-4">
+          <button @click="showAddForm = false" class="px-4 py-2 bg-gray-400 text-white rounded">Anuluj</button>
+          <button @click="saveFundrise" class="px-4 py-2 bg-green-500 text-white rounded">Zapisz</button>
+        </div>
+      </div>
+    </div>
+
       <!-- Aktywne zbiórki: zajmuje 3/5 szerokości -->
       <div
         class="bg-white p-4 rounded-lg shadow-md col-span-3"
@@ -59,6 +82,7 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold">Aktywne zbiórki</h2>
           <button
+            v-if="isTreasurer"
             @click="AddFoundrise(classItem.id)"
             class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
           >
@@ -73,7 +97,8 @@
           <li
             v-for="collection in filteredCollections"
             :key="collection.id"
-            class="p-3 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200"
+            @click="goToFoundrise(collection)"
+            class="p-3 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 cursor-pointer"
           >
             <div class="flex gap-4">
               <img
@@ -83,8 +108,17 @@
               />
               <div class="flex flex-col">
                 <span class="font-semibold">{{ collection.name }}</span>
-                <span class="text-sm text-gray-500">Cel: {{ collection.goal }} zł</span>
-                <span class="text-sm text-gray-500">Status: {{ collection.status }}</span>
+                <span
+                  class="text-sm"
+                  :class="{
+                    'text-green-500': collection.status === 'Aktywna',
+                    'text-red-500': collection.status === 'Zakończona',
+                  }"
+                >
+                  Status: {{ collection.status }}
+                </span>
+                <span class="text-sm text-gray-500">Rozpoczęcie: {{ collection.startDate }}</span>
+                <span class="text-sm text-gray-500">Zakończenie: {{ collection.endDate }}</span>
                 <p class="text-sm text-gray-600">{{ collection.description }}</p>
               </div>
             </div>
@@ -96,11 +130,22 @@
 </template>
 
 <script>
+import { getUserId } from "@/api/user";
+import { createCollection } from "@/api/foundrises";
+
+
 export default {
   data() {
     return {
       classItem: null, // Inicjalizujemy classItem jako null
       showCompleted: true, // Domyślnie pokazujemy zakończone zbiórki
+      showAddForm: false,
+      newFund: {
+        title: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+      },
       collections: [
         {
           id: 1,
@@ -108,6 +153,8 @@ export default {
           goal: 500,
           status: "Aktywna",
           description: "Pomoc dla dzieci.",
+          startDate: "2025-01-01",
+          endDate: "2025-02-01",
           image:
             "https://www.investopedia.com/thmb/u220LqqeStsaBPgVITIKYKTMOic=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-200275642-001-576a033e5f9b58346aace876.jpg",
         },
@@ -117,6 +164,8 @@ export default {
           goal: 1000,
           status: "Zakończona",
           description: "Wsparcie dla schroniska.",
+          startDate: "2024-12-01",
+          endDate: "2025-01-01",
           image: "https://via.placeholder.com/150",
         },
         {
@@ -125,6 +174,8 @@ export default {
           goal: 800,
           status: "Aktywna",
           description: "Pomoc dla zwierząt.",
+          startDate: "2025-01-15",
+          endDate: "2025-03-01",
           image: "https://via.placeholder.com/150",
         },
       ],
@@ -148,6 +199,7 @@ export default {
             "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
         },
       ],
+      userId: null, // Przechowujemy ID użytkownika
     };
   },
   computed: {
@@ -158,23 +210,53 @@ export default {
             (collection) => collection.status !== "Zakończona"
           );
     },
+    isTreasurer() {
+      return this.classItem && this.classItem.treasurer_id === this.userId;
+    },
   },
   created() {
     const classItemData = this.$route.params.classItem; // Pobieramy dane z URL
     if (classItemData) {
       this.classItem = JSON.parse(classItemData); // Dekodujemy dane JSON
     }
+
+    // Pobieramy ID użytkownika z funkcji getUserId
+    this.userId = getUserId();
   },
   methods: {
     moveToHome() {
-      this.$router.push({ name: "home" });
+      this.$router.push({ name: "Home" });
     },
     AddStudent(classId) {
       console.log(`Dodano członka do klasy o id ${classId}`);
     },
-    AddFoundrise(classId) {
-      console.log(`Dodano zbiórkę do klasy o id ${classId}`);
+    AddFoundrise() {
+      this.showAddForm = true;
     },
+    async saveFundrise() {
+      try {
+        const fundData = {
+          ...this.newFund,
+          classId: this.classItem.id,
+        };
+
+        console.log("Dane do wysłania:", fundData); // Debugging
+
+        const response = await createCollection(fundData);
+        console.log("Zbiórka utworzona:", response);
+
+        this.showAddForm = false;
+      } catch (error) {
+        console.error("Błąd podczas zapisu zbiórki:", error);
+      }
+    },
+    goToFoundrise(collection) {
+      this.$router.push({
+        name: "FoundRisePage",
+        params: { collection: JSON.stringify(collection) },
+      });
+    },
+
   },
 };
 </script>
