@@ -116,6 +116,7 @@ class AddChildToClass(BaseModel):
 # Request schema to create a collection
 class CollectionCreate(BaseModel):
     title: str
+    goal : float
     description: str
     start_date: datetime
     end_date: datetime
@@ -131,6 +132,7 @@ class CollectionCreate(BaseModel):
 # Response schema to return created collection
 class CollectionResponse(BaseModel):
     id: int
+    goal : float
     title: str
     description: str
     start_date: datetime

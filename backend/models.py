@@ -123,6 +123,7 @@ class Collection(Base):
     __tablename__ = "collections"
 
     id = Column(Integer, primary_key=True, index=True)
+    goal = Column(Float,nullable = False)
     title = Column(String, nullable=False)
     logo = Column(String, nullable=True)  # Path to logo image
     description = Column(Text, nullable=False)  # Description provided by the treasurer
