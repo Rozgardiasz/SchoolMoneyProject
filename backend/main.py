@@ -14,7 +14,7 @@ from auth import verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_tok
 from models import *
 from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse, ChildCreate, ClassResponse, \
     ClassCreate, ChildModify, ClassModify, AddChildToClass, CollectionResponse, CollectionCreate, AccountResponse, \
-    FinancialTransactionCreate
+    FinancialTransactionCreate, FinancialTransactionResponse
 
 app = FastAPI(debug=True)
 
@@ -436,6 +436,17 @@ def make_transfer(
     current_user: User = Depends(get_current_user)
 ):
 
+    if data.child_id:
+        child = db.query(Child).filter(Child.id == data.child_id, Child.parent_id == current_user.id).first()
+
+        if not child:
+            raise HTTPException(
+            status_code=400,
+            detail="The child with given id doesn't exist or doesn't belong to this user"
+            )
+
+
+
     # Find the destination account by account number
     destination_account = db.query(Account).filter(Account.account_number == data.account_number).first()
     if not destination_account:
@@ -460,7 +471,8 @@ def make_transfer(
         source_account_id=current_user.account.id,
         destination_account_id=destination_account.id,
         amount=data.amount,
-        description=data.description or ""
+        description=data.description or "",
+        child_id=data.child_id
     )
     db.add(transaction)
     db.commit()
@@ -469,8 +481,124 @@ def make_transfer(
     # Return the updated account
     return current_user.account
 
+
+@app.get("/transactions_for_collection/{collection_id}", response_model=List[FinancialTransactionResponse])
+def transactions_for_collection(
+    collection_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Fetch the collection
+    collection = db.query(Collection).filter(Collection.id == collection_id).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    # Fetch transactions for the collection's account
+    transactions = (
+        db.query(FinancialTransaction)
+        .filter(
+            (FinancialTransaction.source_account_id == collection.account.id) |
+            (FinancialTransaction.destination_account_id == collection.account.id)
+        )
+        .all()
+    )
+
+    # Map transactions to response model
+    response = []
+    for transaction in transactions:
+        # Determine the source
+        if transaction.source_account.collection:
+            source = CollectionResponse(
+                id=transaction.source_account.collection.id,
+                goal=transaction.source_account.collection.goal,
+                title=transaction.source_account.collection.title,
+                description=transaction.source_account.collection.description,
+                start_date=transaction.source_account.collection.start_date,
+                end_date=transaction.source_account.collection.end_date,
+                class_id=transaction.source_account.collection.class_id,
+                creator_id=transaction.source_account.collection.creator_id,
+                account=AccountResponse(
+                    id=transaction.source_account.id,
+                    account_number=transaction.source_account.account_number,
+                ),
+            )
+        else:
+            source = UserResponse(
+                id=transaction.source_account.parent.id,
+                first_name=transaction.source_account.parent.first_name,
+                last_name=transaction.source_account.parent.last_name,
+                email=transaction.source_account.parent.email,
+                created_at=transaction.source_account.parent.created_at,
+                account=AccountResponse(
+                    id=transaction.source_account.id,
+                    account_number=transaction.source_account.account_number,
+                ),
+            )
+
+        # Determine the destination
+        if transaction.destination_account.collection:
+            destination = CollectionResponse(
+                id=transaction.destination_account.collection.id,
+                goal=transaction.destination_account.collection.goal,
+                title=transaction.destination_account.collection.title,
+                description=transaction.destination_account.collection.description,
+                start_date=transaction.destination_account.collection.start_date,
+                end_date=transaction.destination_account.collection.end_date,
+                class_id=transaction.destination_account.collection.class_id,
+                creator_id=transaction.destination_account.collection.creator_id,
+                account=AccountResponse(
+                    id=transaction.destination_account.id,
+                    account_number=transaction.destination_account.account_number,
+                ),
+            )
+        else:
+            destination = UserResponse(
+                id=transaction.destination_account.parent.id,
+                first_name=transaction.destination_account.parent.first_name,
+                last_name=transaction.destination_account.parent.last_name,
+                email=transaction.destination_account.parent.email,
+                created_at=transaction.destination_account.parent.created_at,
+                account=AccountResponse(
+                    id=transaction.destination_account.id,
+                    account_number=transaction.destination_account.account_number,
+                ),
+            )
+
+        # Check if the transaction has an associated child
+        child = None
+        if transaction.child_id:
+            # Fetch the child data
+            child = db.query(Child).filter(Child.id == transaction.child_id).first()
+            if child:
+                child_response = ChildResponse(
+                    id=child.id,
+                    first_name=child.first_name,
+                    last_name=child.last_name,
+                    birth_date=child.birth_date
+                    # Add more child details as needed
+                )
+            else:
+                child_response = None
+        else:
+            child_response = None
+
+        # Create a transaction response
+        response.append(
+            FinancialTransactionResponse(
+                source=source,
+                destination=destination,
+                amount=transaction.amount,
+                description=transaction.description,
+                timestamp=transaction.timestamp,
+                child=child_response  # Add child information if it exists
+            )
+        )
+
+    return response
+
+
 if __name__ == "main":
-    # Initialize the database
+
     init_db()
 
     print("Tables created successfully!")

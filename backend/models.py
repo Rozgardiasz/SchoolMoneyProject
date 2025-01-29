@@ -52,6 +52,8 @@ class Child(Base):
     # Foreign key to class
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
     class_ = relationship("Class", back_populates="children")
+    financial_transactions = relationship("FinancialTransaction", back_populates="child")
+
 
 class Class(Base):
     __tablename__ = "classes"
@@ -112,10 +114,15 @@ class FinancialTransaction(Base):
     description = Column(Text, nullable=True)  # Optional description of the transaction
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+    # Foreign key to child
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=True)  # Optional child associated with the transaction
+
     # Relationships
     source_account = relationship("Account", back_populates="outgoing_transactions",foreign_keys=[source_account_id])
-    destination_account = relationship("Account", back_populates="incoming_transactions",foreign_keys=[destination_account_id]
-)
+    destination_account = relationship("Account", back_populates="incoming_transactions",foreign_keys=[destination_account_id])
+    # Optional relationship to the Child model
+    child = relationship("Child", back_populates="financial_transactions", uselist=False)
+
 
 
 # Collection model

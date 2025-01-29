@@ -7,7 +7,7 @@ from sqlalchemy import DateTime
 class AccountResponse(BaseModel):
     id: int
     account_number: str
-    balance: float
+    balance: float|None = None
 
     class Config:
         orm_mode = True  # This allows pydantic to work with ORM models like SQLAlchemy
@@ -146,8 +146,18 @@ class CollectionResponse(BaseModel):
         from_attributes = True
 
 
+
 class FinancialTransactionCreate(BaseModel):
-    class FinancialTransactionCreate(BaseModel):
-        account_number: str = Field(..., description="Destination account number")
-        amount: float = Field(..., gt=0, description="Transfer amount (must be greater than 0)")
-        description: str = Field(None, description="Optional transfer description")
+    account_number: str = Field(..., description="Destination account number")
+    amount: float = Field(..., gt=0, description="Transfer amount (must be greater than 0)")
+    description: str = Field(None, description="Optional transfer description")
+    child_id : int | None = None
+
+
+class FinancialTransactionResponse(BaseModel):
+    source: CollectionResponse|UserResponse
+    destination: CollectionResponse|UserResponse
+    amount: float
+    timestamp : datetime
+    description: str | None
+    child : ChildResponse| None = None
