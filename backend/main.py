@@ -13,7 +13,8 @@ import models
 from auth import verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, decode_access_token, hash_password
 from models import *
 from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse, ChildCreate, ClassResponse, \
-    ClassCreate, ChildModify, ClassModify, AddChildToClass, CollectionResponse, CollectionCreate, AccountResponse
+    ClassCreate, ChildModify, ClassModify, AddChildToClass, CollectionResponse, CollectionCreate, AccountResponse, \
+    FinancialTransactionCreate
 
 app = FastAPI(debug=True)
 
@@ -392,6 +393,81 @@ def get_collections_in_class(
 
     return children
 
+@app.post("/deposit/{amount}", response_model=AccountResponse)
+def add_virtual_money_to_user_account(
+        amount: float,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    # Validate the amount
+    if amount <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="The deposit amount must be greater than 0."
+        )
+
+
+    # Update the user's account balance
+    current_user.account.balance += amount
+    db.add(current_user.account)  # Ensure the account update is tracked
+
+    # Create a financial transaction with a null source_account_id
+    transaction = FinancialTransaction(
+        source_account_id=None,  # Null for deposits
+        destination_account_id=current_user.account.id,
+        amount=amount,
+        description="Virtual money deposit"
+    )
+    db.add(transaction)  # Add the transaction to the database
+
+    db.commit()  # Commit the changes
+    db.refresh(current_user.account)
+
+    return current_user.account
+
+
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException
+
+@app.post("/transfer/", response_model=AccountResponse)
+def make_transfer(
+    data: FinancialTransactionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    # Find the destination account by account number
+    destination_account = db.query(Account).filter(Account.account_number == data.account_number).first()
+    if not destination_account:
+        raise HTTPException(
+            status_code=404,
+            detail="Destination account not found."
+        )
+
+    # Ensure sufficient balance in the source account
+    if current_user.account.balance < data.amount:
+        raise HTTPException(
+            status_code=400,
+            detail="Insufficient funds in your account."
+        )
+
+    # Update balances
+    current_user.account.balance -= data.amount
+    destination_account.balance += data.amount
+
+    # Create a financial transaction record
+    transaction = FinancialTransaction(
+        source_account_id=current_user.account.id,
+        destination_account_id=destination_account.id,
+        amount=data.amount,
+        description=data.description or ""
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(current_user.account)
+
+    # Return the updated account
+    return current_user.account
 
 if __name__ == "main":
     # Initialize the database

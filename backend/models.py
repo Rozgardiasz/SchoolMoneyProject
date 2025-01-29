@@ -106,7 +106,7 @@ class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    source_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)  # Account sending the funds
+    source_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)  # Account sending the funds
     destination_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)  # Account receiving the funds
     amount = Column(Float, nullable=False)  # Transaction amount
     description = Column(Text, nullable=True)  # Optional description of the transaction

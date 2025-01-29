@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, date
 from typing import Optional
 
@@ -145,3 +145,9 @@ class CollectionResponse(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
+class FinancialTransactionCreate(BaseModel):
+    class FinancialTransactionCreate(BaseModel):
+        account_number: str = Field(..., description="Destination account number")
+        amount: float = Field(..., gt=0, description="Transfer amount (must be greater than 0)")
+        description: str = Field(None, description="Optional transfer description")
