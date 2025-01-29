@@ -330,6 +330,37 @@ def create_collection(
         account=AccountResponse.from_orm(account)  # Return AccountResponse instead of plain account
     )
 
+@app.get("/get_children_in_class/{class_id}", response_model=List[ChildResponse])
+def get_children_in_class(
+        class_id : int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    is_authorized = (
+        db.query(Class)
+        .join(Child, Child.class_id == Class.id, isouter=True)
+        .filter(
+            Class.id == class_id,
+            or_(
+                Child.parent_id == current_user.id,
+                Class.treasurer_id == current_user.id
+            )
+        )
+        .first()
+    )
+
+    if not is_authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to view this class."
+        )
+
+    # Retrieve children in the class
+    children = db.query(Child).filter(Child.class_id == class_id).all()
+
+    return children
+
+
 if __name__ == "main":
     # Initialize the database
     init_db()
