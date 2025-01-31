@@ -74,10 +74,14 @@ export const changeClassName = async (token, classId, newName) => {
   }
 };
 
-export const fetchStudentsInClass = async (classId) => {
+export const fetchStudentsInClass = async (classId, token) => {
   try {
-    const response = await axios.get(`${API_URL}/get_children_in_class/${classId}`);
-    
+    const response = await axios.get(`${API_URL}/get_children_in_class/${classId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
     return response.data.map(student => ({
       id: student.id,
       name: `${student.first_name} ${student.last_name}`,

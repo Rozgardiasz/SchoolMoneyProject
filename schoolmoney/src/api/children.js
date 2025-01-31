@@ -42,6 +42,19 @@ export const addChild = async (token, firstName, lastName, birthDate, avatar) =>
   }
 };
 
+export const addChildToClass = async (childId, classId, token) => {
+  try {
+    const response = await axios.post(`${API_URL}/add_child_to_class/`, {
+      child_id: childId,
+      class_id: classId,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Błąd podczas dodawania dziecka do klasy:", error);
 // Update an existing child
 export const updateChild = async (token, childId, firstName, lastName, birthDate) => {
   try {
@@ -56,7 +69,6 @@ export const updateChild = async (token, childId, firstName, lastName, birthDate
     throw error;
   }
 };
-
 // Delete a child – złapujemy błąd walidacji odpowiedzi i zwracamy pusty obiekt
 export const deleteChildApi = async (token, childId) => {
   try {
@@ -79,3 +91,4 @@ export const deleteChildApi = async (token, childId) => {
     throw error;
   }
 };
+
