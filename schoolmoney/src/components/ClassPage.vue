@@ -24,7 +24,7 @@
     <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
       <div
         class="bg-white p-4 rounded-lg shadow-md col-span-2"
-        :style="{ height: `${50 + members.length * 88}px` }"
+        :style="{ height: `${50 + members.length+1 * 48}px` }"
       >
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Uczniowie</h2>
@@ -132,7 +132,7 @@
 <script>
 import { getUserId } from "@/api/user";
 import { createCollection } from "@/api/foundrises";
-
+import { fetchStudentsInClass } from "@/api/classes";
 
 export default {
   data() {
@@ -179,26 +179,7 @@ export default {
           image: "https://via.placeholder.com/150",
         },
       ],
-      members: [
-        {
-          id: 1,
-          name: "Jan Kowalski",
-          avatar:
-            "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
-        },
-        {
-          id: 2,
-          name: "Agnieszka Nowak",
-          avatar:
-            "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
-        },
-        {
-          id: 3,
-          name: "Kamil Zieliński",
-          avatar:
-            "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
-        },
-      ],
+      members: [], // Lista uczniów będzie ładowana dynamicznie
       userId: null, // Przechowujemy ID użytkownika
     };
   },
@@ -220,10 +201,16 @@ export default {
       this.classItem = JSON.parse(classItemData); // Dekodujemy dane JSON
     }
 
-    // Pobieramy ID użytkownika z funkcji getUserId
     this.userId = getUserId();
+
+    if (this.classItem) {
+      this.loadStudents(); // Pobieramy uczniów danej klasy
+    }
   },
   methods: {
+    async loadStudents() {
+      this.members = await fetchStudentsInClass(this.classItem.id);
+    },
     moveToHome() {
       this.$router.push({ name: "Home" });
     },
@@ -256,7 +243,6 @@ export default {
         params: { collection: JSON.stringify(collection) },
       });
     },
-
   },
 };
 </script>

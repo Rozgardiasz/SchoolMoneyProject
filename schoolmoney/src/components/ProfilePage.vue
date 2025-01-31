@@ -91,7 +91,7 @@
 <script>
 import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
-import { fetchChildren, addChild } from "@/api/profile";  
+import { fetchChildren, addChild } from "@/api/children";  
 import { getToken } from "@/api/auth";
 import { getUserFirstName, getUserLastName, getUserEmail } from "@/api/user";
 

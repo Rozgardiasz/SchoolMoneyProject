@@ -73,3 +73,18 @@ export const changeClassName = async (token, classId, newName) => {
     throw error;
   }
 };
+
+export const fetchStudentsInClass = async (classId) => {
+  try {
+    const response = await axios.get(`${API_URL}/get_children_in_class/${classId}`);
+    
+    return response.data.map(student => ({
+      id: student.id,
+      name: `${student.first_name} ${student.last_name}`,
+      avatar: student.avatar || "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
+    }));
+  } catch (error) {
+    console.error('Błąd podczas ładowania uczniów:', error);
+    return [];
+  }
+};
