@@ -57,3 +57,21 @@ export const addChild = async (token, firstName, lastName, birthDate, avatar) =>
     }
   }
 };
+
+export const addChildToClass = async (childId, classId, token) => {
+  try {
+    const response = await axios.post(`${API_URL}/add_child_to_class/`, {
+      child_id: childId,
+      class_id: classId,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Błąd podczas dodawania dziecka do klasy:", error);
+    throw error;
+  }
+};
+
