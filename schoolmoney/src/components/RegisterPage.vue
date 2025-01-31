@@ -62,7 +62,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { registerUser, login, fetchUserDetails } from '@/api/auth'; 
+import { setToken, registerUser, login, fetchUserDetails } from '@/api/auth'; 
 
 export default {
   setup() {
