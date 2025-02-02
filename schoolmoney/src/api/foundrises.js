@@ -1,5 +1,11 @@
+import axios from 'axios';
+
 import { getUserId, getAccountID, getAccountBalance, getAccountNumber } from "@/api/user";
 import {getToken} from "@/api/auth"
+
+
+const API_URL = 'http://localhost:8000';
+
 
 export async function createCollection(fundData) {
   try {
@@ -11,6 +17,7 @@ export async function createCollection(fundData) {
 
     const payload = {
       id: 0, // Backend generuje ID
+      goal: 3000,
       title: fundData.title,
       description: fundData.description,
       start_date: new Date(fundData.startDate).toISOString(),
@@ -26,7 +33,7 @@ export async function createCollection(fundData) {
 
     console.log("Wysyłane dane do API:", payload); // Debugging
 
-    const response = await fetch("http://localhost:8000/create_collection/", {
+    const response = await fetch(`${API_URL}/create_collection/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,5 +51,21 @@ export async function createCollection(fundData) {
   } catch (error) {
     console.error("Błąd przy tworzeniu zbiórki:", error);
     throw error;
+  }
+}
+
+export async function fetchCollectionsInClass(classId) {
+  try {
+    const token = getToken();
+    const response = await axios.get(
+      `${API_URL}/get_collections_in_class/${classId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Błąd podczas pobierania zbiórek:", error);
+    return [];
   }
 }

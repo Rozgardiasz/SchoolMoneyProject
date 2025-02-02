@@ -48,8 +48,8 @@
 
 <script>
 import { useRoute, useRouter } from "vue-router";
-import { clearToken } from "@/api/auth";
-import { clearUserData, getUserFirstName, getUserLastName } from "@/api/user";
+import { logoutUser } from "@/api/auth";
+import { getUserFirstName, getUserLastName } from "@/api/user";
 import { computed } from "vue";
 import logoPng from "../assets/Logo_png.png"; 
 
@@ -64,9 +64,8 @@ export default {
     );
 
     const logout = () => {
+      logoutUser();
       router.push("/");
-      clearToken();
-      clearUserData(); // Fixed function call
     };
 
     const moveToProfile = () => {

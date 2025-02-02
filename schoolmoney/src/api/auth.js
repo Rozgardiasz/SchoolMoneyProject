@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { setUserId, setUserName, setUserEmail, setAccountNumber, setAccountBalance, setAccountID } from './user';
+import { setUserId, setUserName, setUserEmail, setAccountNumber, setAccountBalance, setAccountID, clearUserData } from './user';
 
 const API_URL = 'http://localhost:8000';
 
@@ -63,6 +63,12 @@ export const registerUser = async (first_name, last_name, email, password) => {
     }
   };
   
+
+
+  export const logoutUser = () => {
+    clearToken();
+    clearUserData();
+  };
 
 export const setToken = (token) => {
   localStorage.setItem('access_token', token);

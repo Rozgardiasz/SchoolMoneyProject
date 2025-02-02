@@ -24,7 +24,7 @@
     <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
       <div
         class="bg-white p-4 rounded-lg shadow-md col-span-2"
-        :style="{ height: `${50 + members.length * 88}px` }"
+        :style="{ height: `${50 + (members.length+1) * 58}px` }"
       >
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Uczniowie</h2>
@@ -49,6 +49,27 @@
             <span>{{ member.name }}</span>
           </li>
         </ul>
+      </div>
+
+      <div v-if="showInviteForm" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+          <h2 class="text-xl font-semibold mb-4">Dodaj ucznia</h2>
+          
+          <label class="block mb-2">Kod zaproszenia</label>
+          <input v-model="inviteCode" type="text" class="w-full p-2 border rounded mb-3" disabled />
+
+          <label class="block mb-2">Wybierz dziecko</label>
+          <select v-model="selectedChild" class="w-full p-2 border rounded mb-3">
+            <option v-for="child in childrenList" :key="child.id" :value="child.id">
+              {{ child.first_name }} {{ child.last_name }}
+            </option>
+          </select>
+
+          <div class="flex justify-end space-x-3 mt-4">
+            <button @click="showInviteForm = false" class="px-4 py-2 bg-gray-400 text-white rounded">Anuluj</button>
+            <button @click="submitInviteForm" class="px-4 py-2 bg-green-500 text-white rounded">Dodaj</button>
+          </div>
+        </div>
       </div>
 
 
@@ -77,7 +98,7 @@
       <!-- Aktywne zbiórki: zajmuje 3/5 szerokości -->
       <div
         class="bg-white p-4 rounded-lg shadow-md col-span-3"
-        :style="{ height: `${50 + filteredCollections.length * 160}px` }"
+        :style="{ height: `${50 + (filteredCollections.length+1) * 160}px` }"
       >
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold">Aktywne zbiórki</h2>
@@ -131,7 +152,10 @@
 
 <script>
 import { getUserId } from "@/api/user";
-import { createCollection } from "@/api/foundrises";
+import { createCollection, fetchCollectionsInClass  } from "@/api/foundrises";
+import { fetchStudentsInClass } from "@/api/classes";
+import { fetchChildren, addChildToClass } from "@/api/children";
+import { getToken } from "@/api/auth";
 
 
 export default {
@@ -140,65 +164,19 @@ export default {
       classItem: null, // Inicjalizujemy classItem jako null
       showCompleted: true, // Domyślnie pokazujemy zakończone zbiórki
       showAddForm: false,
+      showInviteForm: false,
+      inviteCode: "",
+      selectedChild: null,
+      childrenList: [],
       newFund: {
         title: "",
         description: "",
         startDate: "",
         endDate: "",
+        
       },
-      collections: [
-        {
-          id: 1,
-          name: "Zbiórka 1",
-          goal: 500,
-          status: "Aktywna",
-          description: "Pomoc dla dzieci.",
-          startDate: "2025-01-01",
-          endDate: "2025-02-01",
-          image:
-            "https://www.investopedia.com/thmb/u220LqqeStsaBPgVITIKYKTMOic=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-200275642-001-576a033e5f9b58346aace876.jpg",
-        },
-        {
-          id: 2,
-          name: "Zbiórka 2",
-          goal: 1000,
-          status: "Zakończona",
-          description: "Wsparcie dla schroniska.",
-          startDate: "2024-12-01",
-          endDate: "2025-01-01",
-          image: "https://via.placeholder.com/150",
-        },
-        {
-          id: 3,
-          name: "Zbiórka 3",
-          goal: 800,
-          status: "Aktywna",
-          description: "Pomoc dla zwierząt.",
-          startDate: "2025-01-15",
-          endDate: "2025-03-01",
-          image: "https://via.placeholder.com/150",
-        },
-      ],
-      members: [
-        {
-          id: 1,
-          name: "Jan Kowalski",
-          avatar:
-            "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
-        },
-        {
-          id: 2,
-          name: "Agnieszka Nowak",
-          avatar:
-            "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
-        },
-        {
-          id: 3,
-          name: "Kamil Zieliński",
-          avatar:
-            "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg",
-        },
-      ],
+      collections: [],
+      members: [], // Lista uczniów będzie ładowana dynamicznie
       userId: null, // Przechowujemy ID użytkownika
     };
   },
@@ -220,15 +198,47 @@ export default {
       this.classItem = JSON.parse(classItemData); // Dekodujemy dane JSON
     }
 
-    // Pobieramy ID użytkownika z funkcji getUserId
     this.userId = getUserId();
+
+    if (this.classItem) {
+      this.loadStudents();
+      this.loadCollections();
+    }
   },
   methods: {
+    async loadStudents() {
+      const token = getToken();
+      this.members = await fetchStudentsInClass(this.classItem.id, token);
+    },
+    async loadCollections() {
+      try {
+        this.collections = await fetchCollectionsInClass(this.classItem.id);
+      } catch (error) {
+        console.error("Błąd podczas ładowania zbiórek:", error);
+      }
+    },
     moveToHome() {
       this.$router.push({ name: "Home" });
     },
-    AddStudent(classId) {
-      console.log(`Dodano członka do klasy o id ${classId}`);
+    async AddStudent() {
+      this.showInviteForm = true;
+      try {
+        const token = getToken();
+        this.childrenList = await fetchChildren(token);
+      } catch (error) {
+        console.error("Błąd podczas pobierania listy dzieci:", error);
+      }
+    },
+    async submitInviteForm() {
+      if (!this.selectedChild) return;
+      try {
+        const token = getToken();
+        await addChildToClass(this.selectedChild, this.classItem.id, token);
+        this.showInviteForm = false;
+        this.loadStudents();
+      } catch (error) {
+        console.error("Błąd podczas dodawania dziecka do klasy:", error);
+      }
     },
     AddFoundrise() {
       this.showAddForm = true;
@@ -256,7 +266,6 @@ export default {
         params: { collection: JSON.stringify(collection) },
       });
     },
-
   },
 };
 </script>
