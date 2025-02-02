@@ -42,19 +42,28 @@ export const addChild = async (token, firstName, lastName, birthDate, avatar) =>
   }
 };
 
+// Add a child to a class
 export const addChildToClass = async (childId, classId, token) => {
   try {
-    const response = await axios.post(`${API_URL}/add_child_to_class/`, {
-      child_id: childId,
-      class_id: classId,
-    }, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const response = await axios.post(
+      `${API_URL}/add_child_to_class/`,
+      {
+        child_id: childId,
+        class_id: classId,
       },
-    });
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
-    console.error("Błąd podczas dodawania dziecka do klasy:", error);
+    console.error('Błąd podczas dodawania dziecka do klasy:', error);
+    throw error;
+  }
+};
+
 // Update an existing child
 export const updateChild = async (token, childId, firstName, lastName, birthDate) => {
   try {
@@ -69,16 +78,17 @@ export const updateChild = async (token, childId, firstName, lastName, birthDate
     throw error;
   }
 };
-// Delete a child – złapujemy błąd walidacji odpowiedzi i zwracamy pusty obiekt
+
+// Delete a child
 export const deleteChildApi = async (token, childId) => {
   try {
     const response = await axios.delete(`${API_URL}/children/${childId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    // Jeśli backend zwróci pustą odpowiedź, zwracamy pusty obiekt
+    // If backend returns an empty response, return an empty object
     return {};
   } catch (error) {
-    // Jeśli błąd dotyczy walidacji odpowiedzi, traktujemy to jako sukces
+    // Handle validation errors as successful deletion
     if (
       error.response &&
       error.response.status === 500 &&
@@ -91,4 +101,3 @@ export const deleteChildApi = async (token, childId) => {
     throw error;
   }
 };
-

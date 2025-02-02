@@ -15,7 +15,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
       </svg>
 
-      <div class="text-left">
+      <div v-if="classItem" class="text-left">
         <h1 class="ml-7 text-3xl font-bold ">{{ classItem.name }}</h1>
         <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurerName }}</h2>
       </div>
@@ -26,7 +26,7 @@
         class="bg-white p-4 rounded-lg shadow-md col-span-2"
         :style="{ height: `${50 + (members.length+1) * 58}px` }"
       >
-        <div class="flex justify-between items-center mb-4">
+        <div v-if="classItem" class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Uczniowie</h2>
           <button
             @click="AddStudent(classItem.id)"
@@ -149,20 +149,19 @@
     </div>
   </div>
 </template>
-
 <script>
 import { getUserId } from "@/api/user";
-import { createCollection, fetchCollectionsInClass  } from "@/api/foundrises";
+import { createCollection, fetchCollectionsInClass } from "@/api/foundrises";
 import { fetchStudentsInClass } from "@/api/classes";
 import { fetchChildren, addChildToClass } from "@/api/children";
 import { getToken } from "@/api/auth";
-
-
+import { jwtDecode } from "jwt-decode";
+import { getClass } from "@/api/classes";
 export default {
   data() {
     return {
-      classItem: null, // Inicjalizujemy classItem jako null
-      showCompleted: true, // Domyślnie pokazujemy zakończone zbiórki
+      classItem: null,
+      showCompleted: true,
       showAddForm: false,
       showInviteForm: false,
       inviteCode: "",
@@ -173,11 +172,10 @@ export default {
         description: "",
         startDate: "",
         endDate: "",
-        
       },
       collections: [],
-      members: [], // Lista uczniów będzie ładowana dynamicznie
-      userId: null, // Przechowujemy ID użytkownika
+      members: [],
+      userId: null,
     };
   },
   computed: {
@@ -193,33 +191,81 @@ export default {
     },
   },
   created() {
-    const classItemData = this.$route.params.classItem; // Pobieramy dane z URL
-    if (classItemData) {
-      this.classItem = JSON.parse(classItemData); // Dekodujemy dane JSON
-    }
+    const classItemData = this.$route.params.classItem;
+    const inviteToken = this.$route.query.token;
 
-    this.userId = getUserId();
+    if (inviteToken) {
+      this.showInviteForm = true;
+      this.inviteCode = inviteToken;
 
-    if (this.classItem) {
+      // Decode the JWT token to extract classId
+      try {
+        const decodedToken = jwtDecode(inviteToken);
+        const classIdFromToken = decodedToken.class_id; // assuming classId is stored in the token payload
+        this.loadClassFromId(classIdFromToken);
+
+      } catch (error) {
+        console.error("Invalid token:", error);
+      }
+    } else if (classItemData) {
+      this.classItem = JSON.parse(classItemData); // Normal class URL
       this.loadStudents();
       this.loadCollections();
     }
+
+    this.userId = getUserId();
   },
   methods: {
-    async loadStudents() {
-      const token = getToken();
-      this.members = await fetchStudentsInClass(this.classItem.id, token);
+    // Assuming you have a method to fetch all classes (replace with your actual method)
+
+
+    async loadClassFromId(classId) {
+      try {
+
+        const token = getToken();
+        if (!token) {
+          throw new Error("Brak tokenu autoryzacyjnego");
+        }
+        const classItem = await getClass(token,classId); // Get all classes (or from a local store)
+
+        if (classItem) {
+          this.classItem = classItem;
+          this.loadStudents();
+          this.loadCollections();
+        } else {
+          console.error("Class not found for ID:", classId);
+        }
+
+        this.childrenList = await fetchChildren(token);
+
+      } catch (error) {
+        console.error("Error fetching class from ID:", error);
+      }
     },
+
+    async loadStudents() {
+      if (!this.classItem) return;
+      const token = getToken();
+      try {
+        this.members = await fetchStudentsInClass(this.classItem.id, token);
+      } catch (error) {
+        console.error("Błąd podczas ładowania studentów:", error);
+      }
+    },
+
     async loadCollections() {
+      if (!this.classItem) return;
       try {
         this.collections = await fetchCollectionsInClass(this.classItem.id);
       } catch (error) {
         console.error("Błąd podczas ładowania zbiórek:", error);
       }
     },
+
     moveToHome() {
       this.$router.push({ name: "Home" });
     },
+
     async AddStudent() {
       this.showInviteForm = true;
       try {
@@ -229,6 +275,7 @@ export default {
         console.error("Błąd podczas pobierania listy dzieci:", error);
       }
     },
+
     async submitInviteForm() {
       if (!this.selectedChild) return;
       try {
@@ -240,32 +287,42 @@ export default {
         console.error("Błąd podczas dodawania dziecka do klasy:", error);
       }
     },
+
     AddFoundrise() {
       this.showAddForm = true;
     },
+
     async saveFundrise() {
+      if (!this.newFund.title || !this.newFund.startDate || !this.newFund.endDate) {
+        alert("Wszystkie pola muszą być wypełnione!");
+        return;
+      }
       try {
-        const fundData = {
+        const newCollection = {
           ...this.newFund,
           classId: this.classItem.id,
         };
-
-        console.log("Dane do wysłania:", fundData); // Debugging
-
-        const response = await createCollection(fundData);
-        console.log("Zbiórka utworzona:", response);
-
+        await createCollection(newCollection);
         this.showAddForm = false;
+        this.newFund = {
+          title: "",
+          description: "",
+          startDate: "",
+          endDate: "",
+        };
+        this.loadCollections();
       } catch (error) {
-        console.error("Błąd podczas zapisu zbiórki:", error);
+        console.error("Błąd podczas zapisywania zbiórki:", error);
       }
     },
+
     goToFoundrise(collection) {
       this.$router.push({
-        name: "FoundRisePage",
-        params: { collection: JSON.stringify(collection) },
+        name: "FoundriseDetails",
+        params: { collectionId: collection.id },
       });
     },
   },
 };
 </script>
+

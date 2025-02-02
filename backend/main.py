@@ -3,12 +3,11 @@ from datetime import timedelta
 from typing import List
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
 
 import CRUD.child
 import auth
@@ -327,6 +326,13 @@ def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), 
     # Return the updated child object
     return child
 
+@app.get("/get_class/{class_id}",response_model=ClassResponse)
+def get_class_by_id(
+        class_id : int,
+        db: Session = Depends(get_db),
+        _: User = Depends(get_current_user)
+):
+    return db.query(Class).filter(Class.id == class_id).first()
 
 @app.post("/create_collection/", response_model=CollectionResponse)
 def create_collection(
@@ -647,6 +653,120 @@ def transactions_for_collection(
 
     return response
 
+
+@app.get("/transactions_for_user", response_model=List[FinancialTransactionResponse])
+def transactions_for_user(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Fetch the user's accounts
+    user_account = current_user.account
+    if not user_account:
+        raise HTTPException(status_code=404, detail="User does not have an associated account")
+
+    # Find all collections managed by the user and their accounts
+    managed_collections = db.query(Collection).filter(Collection.creator_id == current_user.id).all()
+    collection_account_ids = [collection.account.id for collection in managed_collections if collection.account]
+
+    # Collect all account IDs to filter by
+    account_ids = [user_account.id] + collection_account_ids
+
+    # Fetch transactions where user's accounts are involved
+    transactions = (
+        db.query(FinancialTransaction)
+        .filter(
+            (FinancialTransaction.source_account_id.in_(account_ids)) |
+            (FinancialTransaction.destination_account_id.in_(account_ids))
+        )
+        .all()
+    )
+
+    # Map transactions to response model
+    response = []
+    for transaction in transactions:
+        # Determine the source
+        if transaction.source_account.collection:
+            source = CollectionResponse(
+                id=transaction.source_account.collection.id,
+                goal=transaction.source_account.collection.goal,
+                title=transaction.source_account.collection.title,
+                description=transaction.source_account.collection.description,
+                start_date=transaction.source_account.collection.start_date,
+                end_date=transaction.source_account.collection.end_date,
+                class_id=transaction.source_account.collection.class_id,
+                creator_id=transaction.source_account.collection.creator_id,
+                account=AccountResponse(
+                    id=transaction.source_account.id,
+                    account_number=transaction.source_account.account_number,
+                ),
+            )
+        else:
+            source = UserResponse(
+                id=transaction.source_account.parent.id,
+                first_name=transaction.source_account.parent.first_name,
+                last_name=transaction.source_account.parent.last_name,
+                email=transaction.source_account.parent.email,
+                created_at=transaction.source_account.parent.created_at,
+                account=AccountResponse(
+                    id=transaction.source_account.id,
+                    account_number=transaction.source_account.account_number,
+                ),
+            )
+
+        # Determine the destination
+        if transaction.destination_account.collection:
+            destination = CollectionResponse(
+                id=transaction.destination_account.collection.id,
+                goal=transaction.destination_account.collection.goal,
+                title=transaction.destination_account.collection.title,
+                description=transaction.destination_account.collection.description,
+                start_date=transaction.destination_account.collection.start_date,
+                end_date=transaction.destination_account.collection.end_date,
+                class_id=transaction.destination_account.collection.class_id,
+                creator_id=transaction.destination_account.collection.creator_id,
+                account=AccountResponse(
+                    id=transaction.destination_account.id,
+                    account_number=transaction.destination_account.account_number,
+                ),
+            )
+        else:
+            destination = UserResponse(
+                id=transaction.destination_account.parent.id,
+                first_name=transaction.destination_account.parent.first_name,
+                last_name=transaction.destination_account.parent.last_name,
+                email=transaction.destination_account.parent.email,
+                created_at=transaction.destination_account.parent.created_at,
+                account=AccountResponse(
+                    id=transaction.destination_account.id,
+                    account_number=transaction.destination_account.account_number,
+                ),
+            )
+
+        # Check if the transaction has an associated child
+        child_response = None
+        if transaction.child:
+            child_response = ChildResponse(
+                id=transaction.child.id,
+                first_name=transaction.child.first_name,
+                last_name=transaction.child.last_name,
+                birth_date=transaction.child.birth_date,
+            )
+
+        # Create a transaction response
+        response.append(
+            FinancialTransactionResponse(
+                source=source,
+                destination=destination,
+                amount=transaction.amount,
+                description=transaction.description,
+                timestamp=transaction.timestamp,
+                child=child_response,
+            )
+        )
+
+    return response
+
+
 @app.post("/create_invite/")
 def create_invite_token(
     data : CreateInviteRequest,
@@ -664,7 +784,7 @@ def create_invite_token(
 
     # Generate the invite token
     token = auth.create_invite_token(data.class_id, expiration_minutes=data.expiration_minutes)
-    invite_url = f"/process_invite?token={token}"
+    invite_url = f"/class/?token={token}"
     return {"invite_url": invite_url, "expires_in_minutes": data.expiration_minutes}
 
 
@@ -681,7 +801,7 @@ def process_invite(
         class_id = payload.get("class_id")
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=400, detail="Invite token has expired")
-    except jwt.InvalidTokenError:
+    except jwt.JWTError:
         raise HTTPException(status_code=400, detail="Invalid invite token")
 
     # Ensure the class exists

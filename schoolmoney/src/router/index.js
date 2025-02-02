@@ -34,6 +34,12 @@ const routes = [
     props: true, // Pozwala na przekazywanie classItem jako props
   },
   {
+    path: '/class',
+    name: 'ClassPageWithInvite',
+    component: ClassPage,
+    props: route => ({ inviteToken: route.query.token }), // Extract token from query parameter
+  },
+  {
     path: '/foundrise/:collection',
     name: 'FoundRisePage',
     component: FoundRisePage,

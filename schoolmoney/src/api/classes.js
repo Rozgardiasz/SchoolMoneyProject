@@ -23,6 +23,25 @@ export const fetchClasses = async (token) => {
   }
 };
 
+export const getClass = async (token, class_id) =>{
+  try {
+    if (!token) {
+      throw new Error('Brak tokenu autoryzacyjnego');
+    }
+
+    const response = await axios.get(`${API_URL}/get_class/${class_id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log('class:', response.data);
+
+    return response.data;
+  } catch (error) {
+    console.error('Błąd podczas ładowania klas:', error);
+    throw error; 
+  }
+}
 
 export const createClass = async (token, class_name) => {
   try {
