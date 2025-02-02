@@ -6,16 +6,18 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
+from jose import jwt
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 import CRUD.child
+import auth
 import models
 from auth import verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, decode_access_token, hash_password
 from models import *
 from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse, ChildCreate, ClassResponse, \
     ClassCreate, ChildModify, ClassModify, AddChildToClass, CollectionResponse, CollectionCreate, AccountResponse, \
-    FinancialTransactionCreate, FinancialTransactionResponse
+    FinancialTransactionCreate, FinancialTransactionResponse, ProcessInviteRequest, CreateInviteRequest
 
 app = FastAPI(debug=True)
 scheduler = BackgroundScheduler()
@@ -535,7 +537,7 @@ def make_transfer(
 def transactions_for_collection(
     collection_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    _: User = Depends(get_current_user)
 ):
     # Fetch the collection
     collection = db.query(Collection).filter(Collection.id == collection_id).first()
@@ -644,6 +646,60 @@ def transactions_for_collection(
         )
 
     return response
+
+@app.post("/create_invite/")
+def create_invite_token(
+    data : CreateInviteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Check if the class exists
+    class_ = db.query(Class).filter(Class.id == data.class_id).first()
+    if not class_:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    # Ensure the current user is the treasurer of the class
+    if class_.treasurer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to create an invite for this class")
+
+    # Generate the invite token
+    token = auth.create_invite_token(data.class_id, expiration_minutes=data.expiration_minutes)
+    invite_url = f"/process_invite?token={token}"
+    return {"invite_url": invite_url, "expires_in_minutes": data.expiration_minutes}
+
+
+@app.post("/process_invite")
+def process_invite(
+    token: str,
+    request: ProcessInviteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Decode and validate the token
+    try:
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=["HS256"])
+        class_id = payload.get("class_id")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Invite token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid invite token")
+
+    # Ensure the class exists
+    class_ = db.query(Class).filter(Class.id == class_id).first()
+    if not class_:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    # Validate the child
+    child = db.query(Child).filter(Child.id == request.child_id, Child.parent_id == current_user.id).first()
+    if not child:
+        raise HTTPException(status_code=400, detail="Invalid child or child does not belong to you")
+
+    # Associate the child with the class
+    child.class_id = class_id
+    db.add(child)
+    db.commit()
+
+    return {"message": "Invite successfully processed and child added to the class"}
 
 
 if __name__ == "main":

@@ -5,7 +5,7 @@ from typing import Optional
 
 SECRET_KEY = "your-secret-key"  # Change this to a more secure key
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Token expires in 30 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 6*60  # Token expires in 6 hours
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -35,3 +35,13 @@ def decode_access_token(token: str):
         return payload
     except JWTError:
         return None
+
+
+
+
+def create_invite_token(class_id: int, expiration_minutes: int = 60):
+    payload = {
+        "class_id": class_id,
+        "exp": datetime.utcnow() + timedelta(minutes=expiration_minutes),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
