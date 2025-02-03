@@ -87,7 +87,7 @@
 
         <!-- Przycisk po prawej stronie -->
         <div class="flex space-x-4">
-          <button @click="openPaymentModal" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600">
+          <button @click="openDepositModal" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600">
             Wpłać
           </button>
           <button class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600">
@@ -144,45 +144,74 @@
         </div>
       </div>
     </div>
-    <!-- Modal: Wpłata -->
-    <div v-if="showPaymentModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 class="text-xl font-semibold mb-4">Wpisz kwotę wpłaty</h2>
-        <input v-model="paymentAmount" class="w-full p-2 border rounded-lg mb-3" type="number" placeholder="Kwota w zł" />
+<!-- Modal do wprowadzenia danych przelewu -->
+<div v-if="showDepositModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white p-6 rounded-lg shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-4">Wpłać na zbiórkę</h2>
+    
+    <!-- Tytuł przelewu -->
+    <label class="block text-gray-700">Tytuł przelewu</label>
+    <input v-model="title" class="w-full p-2 border rounded-lg mb-3" type="text" />
 
-        <div class="flex justify-between mt-4">
-          <button @click="confirmPayment" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
-          <button @click="closePaymentModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Zamknij</button>
-        </div>
-      </div>
+    <!-- Opis przelewu -->
+    <label class="block text-gray-700">Opis przelewu</label>
+    <textarea v-model="description" class="w-full p-2 border rounded-lg mb-3"></textarea>
+
+    <!-- Wybór dziecka -->
+    <label class="block mb-2">Wybierz dziecko</label>
+    <select v-model="selectedChild" class="w-full p-2 border rounded mb-3">
+      <option v-for="child in childrenList" :key="child.id" :value="child.id">
+        {{ child.first_name }} {{ child.last_name }}
+      </option>
+    </select>
+
+    <!-- Kwota przelewu -->
+    <label class="block text-gray-700">Kwota przelewu</label>
+    <input v-model="amount" class="w-full p-2 border rounded-lg mb-3" type="number" step="0.01" min="0" />
+
+    <!-- Przyciski -->
+    <div class="flex justify-between mt-4">
+      <button @click="confirmDeposit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
+      <button @click="closeDepositModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
     </div>
+  </div>
+</div>
 
-    <!-- Modal: Potwierdzenie wpłaty -->
-    <div v-if="showConfirmationModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 class="text-xl font-semibold mb-4">Potwierdzenie wpłaty</h2>
-        <p class="text-lg">Czy na pewno chcesz przelać {{ paymentAmount }} zł?</p>
 
-        <div class="flex justify-between mt-4">
-          <button @click="finalizePayment" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
-          <button @click="closeConfirmationModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
-        </div>
-      </div>
+<!-- Modal potwierdzenia przelewu -->
+<div v-if="showConfirmModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white p-6 rounded-lg shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-4">Potwierdzenie przelewu</h2>
+    <p>Czy na pewno chcesz przelać {{ amount }} zł na zbiórkę?</p>
+    
+    <!-- Przyciski -->
+    <div class="flex justify-between mt-4">
+      <button @click="finalizeDeposit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
+      <button @click="closeConfirmModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
     </div>
+  </div>
+</div>
+
   </div>
 </template>
 
 <script>
 import { fetchStudentsInClass } from "@/api/classes";
-import { getToken } from '@/api/auth'; // Pobieramy token z auth.js
+import { fetchChildren } from "@/api/children";
+import { getToken } from '@/api/auth';
 
 export default {
   props: ["collection"],
   data() {
     return {
       showEditForm: false,
-      showPaymentModal: false,
-      showConfirmationModal: false,
+      showDepositModal: false,  
+      titleTransfer: "", 
+      descriptionTransfer: "", 
+      selectedChild: null,
+      childrenList: [], 
+      amount: null,
+      showConfirmModal: false,
       parsedCollection: null,
       members: [],
       transactions: [
@@ -190,28 +219,7 @@ export default {
         { id: 2, name: "Amelka Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
         { id: 3, name: "Justyna Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
         { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-
+        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" }
       ],
     };
   },
@@ -264,27 +272,51 @@ export default {
     endFoundRise() {
       console.log("Zbiórka zakończona.");
     },
-    openPaymentModal() {
-      this.showPaymentModal = true;
+    async openDepositModal() {
+      this.showDepositModal = true;
+      const token = getToken();
+      this.childrenList = await fetchChildren(token);
     },
-    closePaymentModal() {
-      this.showPaymentModal = false;
+    closeDepositModal() {
+      this.showDepositModal = false;
     },
-    confirmPayment() {
-      if (this.paymentAmount && this.paymentAmount > 0) {
-        this.showPaymentModal = false;
-        this.showConfirmationModal = true;
+    closeConfirmModal() {
+      this.showConfirmModal = false;
+      this.showDepositModal = true;
+    },
+    confirmDeposit() {
+      if (this.amount <= 0) {
+        alert("Kwota musi być większa niż 0!");
+        return;
       }
+      this.showConfirmModal = true;
+      this.showDepositModal = false;
     },
-    closeConfirmationModal() {
-      this.showConfirmationModal = false;
-      this.showPaymentModal = true;
+    finalizeDeposit() {
+      this.showConfirmModal = false;
+      this.showDepositModal = false;
+      // Logika przelewu (np. wysłanie zapytania do API)
+      console.log(`Przelew na kwotę ${this.amount} zł został pomyślnie wykonany!`);
+
+      // Po udanym przelewie, zamknij oba modale
+
     },
-    finalizePayment() {
-      // Finalizowanie wpłaty, możesz dodać logikę zapisu transakcji
-      console.log(`Wpłacono: ${this.paymentAmount} zł`);
-      this.showConfirmationModal = false;
-      this.paymentAmount = null;
+    
+    makeDeposit() {
+      // Logika wpłaty
+      console.log(`Wpłacono ${this.amount} zł na konto dziecka ${this.selectedChild}`);
+      this.transactions.push({
+        id: Date.now(),
+        name: `Wpłata na konto dziecka ${this.selectedChild}`,
+        amount: this.amount,
+        date: new Date().toLocaleDateString(),
+        type: "wpłata"
+      });
+      this.showConfirmModal = false;
+    },
+    cancelDeposit() {
+      this.showConfirmModal = false;
+      this.showDepositModal = true;
     }
   },
 };
