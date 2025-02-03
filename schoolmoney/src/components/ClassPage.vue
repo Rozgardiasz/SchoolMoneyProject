@@ -1,41 +1,41 @@
 <template>
-    <div class="p-6 min-h-screen">
-      <!-- Górna sekcja z nazwą klasy, ID skarbnika i strzałką wyjścia -->
-      <div class="flex justify-between items-start mb-6 relative">
-        <!-- Strzałka wyjścia -->
-        <svg
-          @click="moveToHome"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="absolute top-0 left-0 w-6 h-6 cursor-pointer text-gray-800"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-  
-        <div class="text-left">
-          <h1 class="ml-7 text-3xl font-bold ">{{ classItem.name }}</h1>
-          <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurerName }}</h2>
+  <div class="p-6 min-h-screen">
+    <div class="flex justify-between items-start mb-6 relative">
+      <svg
+        @click="moveToHome"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="absolute top-0 left-0 w-6 h-6 cursor-pointer text-gray-800"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+
+      <div v-if="classItem" class="text-left">
+        <h1 class="ml-7 text-3xl font-bold ">{{ classItem.name }}</h1>
+        <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurerName }}</h2>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div
+        class="bg-white p-4 rounded-lg shadow-md col-span-2"
+        :style="{ height: `${50 + (members.length+1) * 58}px` }"
+      >
+        <div v-if="classItem" class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Uczniowie</h2>
+          <button
+            @click="AddStudent(classItem.id)"
+            class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
+          >
+            Dodaj ucznia
+          </button>
         </div>
       </div>
   
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <!-- Lista uczniów -->
-        <div
-          class="bg-white p-4 rounded-lg shadow-md col-span-2"
-          :style="{ height: `${50 + (members.length+1) * 58}px` }"
-        >
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold">Uczniowie</h2>
-            <button
-              @click="AddStudent"
-              class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
-            >
-              Dodaj ucznia
-            </button>
-          </div>
+
           <ul class="space-y-3">
             <li
               v-for="member in members"
@@ -151,152 +151,178 @@
           </ul>
         </div>
       </div>
-    </div>
-  </template>
-  
-  <script>
-  import { getUserId } from "@/api/user";
-  import { createCollection, fetchCollectionsInClass } from "@/api/foundrises";
-  import { fetchStudentsInClass } from "@/api/classes";
-  import { fetchChildren, addChildToClass } from "@/api/children";
-  import { getToken } from "@/api/auth";
-  
-  export default {
-    data() {
-      return {
-        classItem: null, // Inicjalizujemy classItem jako null
-        showCompleted: true, // Domyślnie pokazujemy zakończone zbiórki
-        showAddForm: false,
-        showInviteForm: false,
-        inviteCode: "",
-        selectedChild: null,
-        childrenList: [],
-        // Pola formularza dodawania zbiórki
+</template>
+<script>
+import { getUserId } from "@/api/user";
+import { createCollection, fetchCollectionsInClass } from "@/api/foundrises";
+import { fetchStudentsInClass } from "@/api/classes";
+import { fetchChildren, addChildToClass } from "@/api/children";
+import { getToken } from "@/api/auth";
+import { jwtDecode } from "jwt-decode";
+import { getClass } from "@/api/classes";
+export default {
+  data() {
+    return {
+      classItem: null,
+      showCompleted: true,
+      showAddForm: false,
+      showInviteForm: false,
+      inviteCode: "",
+      selectedChild: null,
+      childrenList: [],
+      newFund: {
         title: "",
         description: "",
         startDate: "",
         endDate: "",
-        collections: [],
-        members: [], // Lista uczniów będzie ładowana dynamicznie
-        userId: null, // Przechowujemy ID użytkownika
-      };
-    },
-    computed: {
-      filteredCollections() {
-        return this.showCompleted
-          ? this.collections
-          : this.collections.filter(
-              (fundrise) => fundrise.status !== "Zakończona"
-            );
       },
-      isTreasurer() {
-        return this.classItem && this.classItem.treasurer_id === this.userId;
-      },
+      collections: [],
+      members: [],
+      userId: null,
+    };
+  },
+  computed: {
+    filteredCollections() {
+      return this.showCompleted
+        ? this.collections
+        : this.collections.filter(
+            (collection) => collection.status !== "Zakończona"
+          );
     },
-    created() {
-      const classItemData = this.$route.params.classItem; // Pobieramy dane z URL
-      if (classItemData) {
-        this.classItem = JSON.parse(classItemData); // Dekodujemy dane JSON
+    isTreasurer() {
+      return this.classItem && this.classItem.treasurer_id === this.userId;
+    },
+  },
+  created() {
+    const classItemData = this.$route.params.classItem;
+    const inviteToken = this.$route.query.token;
+
+    if (inviteToken) {
+      this.showInviteForm = true;
+      this.inviteCode = inviteToken;
+
+      // Decode the JWT token to extract classId
+      try {
+        const decodedToken = jwtDecode(inviteToken);
+        const classIdFromToken = decodedToken.class_id; // assuming classId is stored in the token payload
+        this.loadClassFromId(classIdFromToken);
+
+      } catch (error) {
+        console.error("Invalid token:", error);
       }
-  
-      this.userId = getUserId();
-  
-      if (this.classItem) {
+    } else if (classItemData) {
+      this.classItem = JSON.parse(classItemData); // Normal class URL
+      this.loadStudents();
+      this.loadCollections();
+    }
+
+    this.userId = getUserId();
+  },
+  methods: {
+    // Assuming you have a method to fetch all classes (replace with your actual method)
+
+
+    async loadClassFromId(classId) {
+      try {
+
+        const token = getToken();
+        if (!token) {
+          throw new Error("Brak tokenu autoryzacyjnego");
+        }
+        const classItem = await getClass(token,classId); // Get all classes (or from a local store)
+
+        if (classItem) {
+          this.classItem = classItem;
+          this.loadStudents();
+          this.loadCollections();
+        } else {
+          console.error("Class not found for ID:", classId);
+        }
+
+        this.childrenList = await fetchChildren(token);
+
+      } catch (error) {
+        console.error("Error fetching class from ID:", error);
+      }
+    },
+
+    async loadStudents() {
+      if (!this.classItem) return;
+      const token = getToken();
+      try {
+        this.members = await fetchStudentsInClass(this.classItem.id, token);
+      } catch (error) {
+        console.error("Błąd podczas ładowania studentów:", error);
+      }
+    },
+
+    async loadCollections() {
+      if (!this.classItem) return;
+      try {
+        this.collections = await fetchCollectionsInClass(this.classItem.id);
+      } catch (error) {
+        console.error("Błąd podczas ładowania zbiórek:", error);
+      }
+    },
+
+    moveToHome() {
+      this.$router.push({ name: "Home" });
+    },
+
+    async AddStudent() {
+      this.showInviteForm = true;
+      try {
+        const token = getToken();
+        this.childrenList = await fetchChildren(token);
+      } catch (error) {
+        console.error("Błąd podczas pobierania listy dzieci:", error);
+      }
+    },
+
+    async submitInviteForm() {
+      if (!this.selectedChild) return;
+        const token = getToken();
+        await addChildToClass(this.selectedChild, this.classItem.id, token);
+        this.showInviteForm = false;
         this.loadStudents();
         this.loadCollections();
+    },
+
+    AddFoundrise() {
+      this.showAddForm = true;
+    },
+
+    async saveFundrise() {
+      if (!this.newFund.title || !this.newFund.startDate || !this.newFund.endDate) {
+        alert("Wszystkie pola muszą być wypełnione!");
+        return;
+      }
+      try {
+        const newCollection = {
+          ...this.newFund,
+          classId: this.classItem.id,
+        };
+        await createCollection(newCollection);
+        this.showAddForm = false;
+        this.newFund = {
+          title: "",
+          description: "",
+          startDate: "",
+          endDate: "",
+        };
+        this.loadCollections();
+      } catch (error) {
+        console.error("Błąd podczas zapisywania zbiórki:", error);
       }
     },
-    methods: {
-      async loadStudents() {
-        const token = getToken();
-        this.members = await fetchStudentsInClass(this.classItem.id, token);
-      },
-      async loadCollections() {
-        try {
-          this.collections = await fetchCollectionsInClass(this.classItem.id);
-        } catch (error) {
-          console.error("Błąd podczas ładowania zbiórek:", error);
-        }
-      },
-      moveToHome() {
-        this.$router.push({ name: "Home" });
-      },
-      async AddStudent() {
-        this.showInviteForm = true;
-        try {
-          const token = getToken();
-          this.childrenList = await fetchChildren(token);
-        } catch (error) {
-          console.error("Błąd podczas pobierania listy dzieci:", error);
-        }
-      },
-      async submitInviteForm() {
-        if (!this.selectedChild) return;
-        try {
-          const token = getToken();
-          await addChildToClass(this.selectedChild, this.classItem.id, token);
-          this.showInviteForm = false;
-          this.loadStudents();
-        } catch (error) {
-          console.error("Błąd podczas dodawania dziecka do klasy:", error);
-        }
-      },
-      AddFoundrise() {
-        this.showAddForm = true;
-      },
-      async saveFundrise() {
-  try {
-    // Walidacja obecności dat
-    if (!this.startDate || !this.endDate) {
-      console.error("Data rozpoczęcia lub zakończenia jest pusta.");
-      return;
-    }
 
-    // Konwersja dat na obiekty Date
-    const start = new Date(this.startDate);
-    const end = new Date(this.endDate);
-
-    // Walidacja, czy daty są prawidłowe
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      console.error("Nieprawidłowy format daty.");
-      return;
-    }
-
-    // Przygotowanie danych zgodnie z wymaganym formatem payloadu
-    const fundData = {
-      title: this.title,
-      goal: 0, // lub możesz dodać pole formularza dla celu zbiórki
-      description: this.description,
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      classId: this.classItem.id
-    };
-
-    console.log("Dane do wysłania:", fundData);
-
-    const response = await createCollection(fundData);
-    console.log("Zbiórka utworzona:", response);
-
-    // Zamykamy formularz i odświeżamy listę zbiórek
-    this.showAddForm = false;
-    this.loadCollections();
-
-    // Czyszczenie pól formularza
-    this.title = "";
-    this.description = "";
-    this.startDate = "";
-    this.endDate = "";
-  } catch (error) {
-    console.error("Błąd podczas zapisu zbiórki:", error);
-  }
-},
-      goToFundrise(fundrise) {
-        this.$router.push({
-          name: "FoundRisePage",
-          params: { collection: JSON.stringify(fundrise) },
-        });
-      },
+    goToFoundrise(collection) {
+      this.$router.push({
+        name: "FoundriseDetails",
+        params: { collectionId: collection.id },
+      });
     },
-  };
-  </script>
-  
+  },
+};
+</script>
+

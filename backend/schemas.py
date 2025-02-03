@@ -161,3 +161,10 @@ class FinancialTransactionResponse(BaseModel):
     timestamp : datetime
     description: str | None
     child : ChildResponse| None = None
+
+class CreateInviteRequest(BaseModel):
+    class_id : int
+    expiration_minutes : int = 6 * 60
+
+class ProcessInviteRequest(BaseModel):
+    child_id: int
