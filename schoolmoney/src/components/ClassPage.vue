@@ -170,12 +170,10 @@ export default {
       inviteCode: "",
       selectedChild: null,
       childrenList: [],
-      newFund: {
-        title: "",
-        description: "",
-        startDate: "",
-        endDate: "",
-      },
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
       collections: [],
       members: [],
       userId: null,
@@ -293,28 +291,39 @@ export default {
     },
 
     async saveFundrise() {
-      if (!this.newFund.title || !this.newFund.startDate || !this.newFund.endDate) {
-        alert("Wszystkie pola muszą być wypełnione!");
-        return;
-      }
-      try {
-        const newCollection = {
-          ...this.newFund,
-          classId: this.classItem.id,
-        };
-        await createCollection(newCollection);
-        this.showAddForm = false;
-        this.newFund = {
-          title: "",
-          description: "",
-          startDate: "",
-          endDate: "",
-        };
-        this.loadCollections();
-      } catch (error) {
-        console.error("Błąd podczas zapisywania zbiórki:", error);
-      }
-    },
+  if (!this.title || !this.startDate || !this.endDate) {
+    console.error("Wszystkie pola muszą być wypełnione!");
+    return;
+  }
+
+  try {
+    // Tworzymy obiekt zbiórki z poprawnymi wartościami
+    const fundData = {
+      title: this.title,
+      goal: 0, // Możesz dodać pole celu w formularzu
+      description: this.description,
+      startDate: new Date(this.startDate).toISOString(),
+      endDate: new Date(this.endDate).toISOString(),
+      classId: this.classItem.id
+    };
+
+    // Wywołujemy funkcję API do stworzenia zbiórki
+    await createCollection(fundData);
+
+    // Resetujemy formularz i zamykamy okno
+    this.showAddForm = false;
+    this.title = "";
+    this.description = "";
+    this.startDate = "";
+    this.endDate = "";
+
+    // Ponownie ładujemy listę zbiórek
+    this.loadCollections();
+  } catch (error) {
+    console.error("Błąd podczas zapisywania zbiórki:", error);
+  }
+},
+
 
     goToFoundrise(collection) {
       this.$router.push({

@@ -62,7 +62,7 @@ export const addChildToClass = async (childId, classId, token) => {
     console.error("Błąd podczas dodawania dziecka do klasy:", error);
   }
 }
-// Update an existing child
+
 export const updateChild = async (token, childId, firstName, lastName, birthDate) => {
   try {
     const response = await axios.put(
