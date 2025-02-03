@@ -59,12 +59,10 @@ export const addChildToClass = async (childId, classId, token) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Błąd podczas dodawania dziecka do klasy:', error);
-    throw error;
+    console.error("Błąd podczas dodawania dziecka do klasy:", error);
   }
-};
+}
 
-// Update an existing child
 export const updateChild = async (token, childId, firstName, lastName, birthDate) => {
   try {
     const response = await axios.put(

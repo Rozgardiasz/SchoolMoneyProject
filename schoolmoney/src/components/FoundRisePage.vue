@@ -132,46 +132,59 @@
       </div>
     </div>
 </template>
-  
+
 <script>
+import { fetchStudentsInClass } from "@/api/classes";
+import { getToken } from '@/api/auth'; // Pobieramy token z auth.js
+
 export default {
-    props: ["collection"],
-    data() {
-      return {
-        showEditForm: false,
-        parsedCollection: null,
-        members: [
-          { id: 1, name: "Jan Kowalski", avatar: "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg" },
-          { id: 2, name: "Agnieszka Nowak", avatar: "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg" },
-          { id: 3, name: "Kamil Zieliński", avatar: "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg" },
-        ],
-        transactions: [
+  props: ["collection"],
+  data() {
+    return {
+      showEditForm: false,
+      parsedCollection: null,
+      members: [],
+      transactions: [
         { id: 1, name: "Zamknięcie zbiórki", amount: 2500.0, date: "23.01.2025", type: "zamknięcie" },
         { id: 2, name: "Amelka Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
         { id: 3, name: "Justyna Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
         { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
       ],
-      };
+    };
+  },
+  computed: {
+    statusClass() {
+      return this.parsedCollection?.status === "Aktywna" ? "text-green-500 font-semibold" : "font-semibold";
     },
-    computed: {
-      statusClass() {
-        return this.parsedCollection?.status === "Aktywna" ? "text-green-500 font-semibold" : "font-semibold";
-      },
-    },
-    created() {
-      if (this.collection) {
-        try {
-          this.parsedCollection = JSON.parse(this.collection);
-        } catch (error) {
-          console.error("Błąd parsowania collection:", error);
+  },
+  async created() {
+    if (this.collection) {
+      try {
+        this.parsedCollection = JSON.parse(this.collection);
+        await this.loadClassMembers(); // Pobierz listę uczniów
+      } catch (error) {
+        console.error("Błąd parsowania collection:", error);
+      }
+    }
+  },
+  methods: {
+    async loadClassMembers() {
+      try {
+        const { class_id } = this.parsedCollection || {};
+        const token = getToken(); // Pobieramy token z localStorage
+        if (!class_id || !token) {
+          console.error("Brak class_id lub tokena");
+          return;
         }
+        this.members = await fetchStudentsInClass(class_id, token);
+      } catch (error) {
+        console.error("Błąd podczas pobierania uczniów:", error);
       }
     },
-    methods: {
-      goBack() {
-        this.$router.go(-1);
-      },
-      openEditForm() {
+    goBack() {
+      this.$router.go(-1);
+    },
+    openEditForm() {
       this.showEditForm = true;
       this.editFund = {
         title: this.parsedCollection.name,
@@ -188,6 +201,6 @@ export default {
     endFoundRise() {
       console.log("Zbiórka zakończona.");
     },
-    },
+  },
 };
 </script>
