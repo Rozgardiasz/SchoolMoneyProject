@@ -391,7 +391,7 @@ def create_collection(
         account=AccountResponse.from_orm(account)  # Return AccountResponse instead of plain account
     )
 
-@app.put("/modify_collection/{collection_id}", responseModel=CollectionResponse)
+@app.put("/modify_collection/{collection_id}", response_model=CollectionResponse)
 def modify_collection(
     collection_id: int,
     data: CollectionModify,
@@ -547,7 +547,25 @@ def make_transfer(
             status_code=400,
             detail="The child with given id doesn't exist or doesn't belong to this user"
             )
+      # Check if the transfer is related to a collection account, it should when request has child id
+        collection = (
+            db.query(Collection)
+            .filter(Collection.class_id == child.class_id, Collection.account_id == data.account_id)
+            .first()
+        )
 
+        if not collection:
+            raise HTTPException(
+                status_code=400,
+                detail="The transfer is not associated with a valid collection account."
+            )
+
+        # Check if the collection is still valid
+        if collection.end_date < datetime.utcnow():
+            raise HTTPException(
+                status_code=400,
+                detail="The collection associated with this account has expired."
+            )
 
 
     # Find the destination account by account number
