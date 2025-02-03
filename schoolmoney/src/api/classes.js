@@ -111,3 +111,31 @@ export const fetchStudentsInClass = async (classId, token) => {
     return [];
   }
 };
+
+export async function getClassInvite(token, class_id) {
+  try {
+    if (!token) throw new Error("Brak tokenu autoryzacyjnego");
+    if (!class_id) throw new Error("Brak ID klasy");
+
+    const expiration_minutes = 360
+    const response = await fetch(`${API_URL}/create_invite/`, {
+      method: "POST", // Zmiana na POST, ponieważ wysyłamy body
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        class_id,
+        expiration_minutes,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Błąd podczas pobierania zaproszenia");
+
+    const data = await response.json();
+    return data.invite_url; // Zwracamy tylko invite_url
+  } catch (error) {
+    console.error("Błąd pobierania zaproszenia:", error);
+    return null;
+  }
+};
