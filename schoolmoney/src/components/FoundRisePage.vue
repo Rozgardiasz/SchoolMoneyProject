@@ -40,7 +40,7 @@
             </button>
           </div>
 
-          <h1 class="text-3xl font-bold mt-4">{{ parsedCollection.name }}</h1>
+          <h1 class="text-3xl font-bold mt-4">{{ parsedCollection.title }}</h1>
           <p class="text-gray-600 mt-2">Cel: {{ parsedCollection.goal }} zł</p>
   
           <!-- Daty z ikonkami -->
@@ -48,14 +48,14 @@
             <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V9H3v10a2 2 0 002 2z" />
             </svg>
-            <p>Rozpoczęcie: {{ parsedCollection.startDate }}</p>
+            <p>Rozpoczęcie: {{ formattedStartDate }}</p>
           </div>
   
           <div class="text-gray-500 flex items-center">
             <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V9H3v10a2 2 0 002 2z" />
             </svg>
-            <p>Zakończenie: {{ parsedCollection.endDate }}</p>
+            <p>Zakończenie: {{ formattedEndDate }}</p>
           </div>
   
           <!-- Status -->
@@ -216,6 +216,12 @@ export default {
     };
   },
   computed: {
+    formattedStartDate() {
+      return this.formatDate(this.parsedCollection?.start_date);
+    },
+    formattedEndDate() {
+      return this.formatDate(this.parsedCollection?.end_date);
+    },
     statusClass() {
       return this.parsedCollection?.status === "Aktywna" ? "text-green-500 font-semibold" : "font-semibold";
     },
@@ -231,6 +237,11 @@ export default {
     }
   },
   methods: {
+    formatDate(dateString) {
+      if (!dateString) return "Brak daty";
+      const date = new Date(dateString);
+      return date.toLocaleDateString("pl-PL"); // Format DD.MM.YYYY
+    },
     async loadClassMembers() {
       try {
         const { class_id } = this.parsedCollection || {};
@@ -250,7 +261,7 @@ export default {
     openEditForm() {
       this.showEditForm = true;
       this.editFund = {
-        title: this.parsedCollection.name,
+        title: this.parsedCollection.title,
         description: this.parsedCollection.description,
         goal: this.parsedCollection.goal,
         startDate: this.parsedCollection.startDate,
