@@ -51,7 +51,6 @@
           </ul>
         </div>
   
-        <!-- Formularz zaproszenia -->
         <div v-if="showInviteForm" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
           <div class="bg-white p-6 rounded-lg shadow-lg w-96">
             <h2 class="text-xl font-semibold mb-4">Dodaj ucznia</h2>
@@ -73,7 +72,6 @@
           </div>
         </div>
   
-        <!-- Formularz dodawania zbiórki -->
         <div v-if="showAddForm" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
           <div class="bg-white p-6 rounded-lg shadow-lg w-96">
             <h2 class="text-xl font-semibold mb-4">Dodaj zbiórkę</h2>
@@ -83,6 +81,9 @@
             <label class="block mb-2">Opis</label>
             <textarea v-model="description" class="w-full p-2 border rounded mb-3"></textarea>
             
+            <label class="block mb-2">Cel zbiórki</label>
+            <input v-model="goal" type="number" min="1" class="w-full p-2 border rounded mb-3">
+
             <label class="block mb-2">Data rozpoczęcia</label>
             <input v-model="startDate" type="date" class="w-full p-2 border rounded mb-3">
 
@@ -96,7 +97,6 @@
           </div>
         </div>
   
-        <!-- Lista aktywnych zbiórek -->
         <div
           class="bg-white p-4 rounded-lg shadow-md col-span-3"
           :style="{ height: `${50 + (filteredCollections.length+1) * 160}px` }"
@@ -119,7 +119,7 @@
             <li
               v-for="fundrise in filteredCollections"
               :key="fundrise.id"
-              @click="goToFundrise(fundrise)"
+              @click="goToFoundrise(fundrise)"
               class="p-3 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 cursor-pointer"
             >
               <div class="flex gap-4">
@@ -292,8 +292,16 @@ export default {
     },
 
     async saveFundrise() {
-  if (!this.title || !this.startDate || !this.endDate) {
+  // Sprawdzenie, czy pola są wypełnione
+  if (!this.title || !this.startDate || !this.endDate || this.goal === "" || this.goal === null) {
     console.error("Wszystkie pola muszą być wypełnione!");
+    return;
+  }
+
+  // Sprawdzenie, czy goal jest liczbą większą od zera
+  const goalValue = parseFloat(this.goal);
+  if (isNaN(goalValue) || goalValue <= 0) {
+    console.error("Cel zbiórki musi być liczbą większą od zera!");
     return;
   }
 
@@ -301,7 +309,7 @@ export default {
     // Tworzymy obiekt zbiórki z poprawnymi wartościami
     const fundData = {
       title: this.title,
-      goal: 0, // Możesz dodać pole celu w formularzu
+      goal: goalValue, // Przekazujemy już zwalidowaną liczbę
       description: this.description,
       startDate: new Date(this.startDate).toISOString(),
       endDate: new Date(this.endDate).toISOString(),
@@ -317,6 +325,7 @@ export default {
     this.description = "";
     this.startDate = "";
     this.endDate = "";
+    this.goal = "";
 
     // Ponownie ładujemy listę zbiórek
     this.loadCollections();

@@ -17,7 +17,7 @@ export async function createCollection(fundData) {
 
     const payload = {
       id: 0, // Backend generuje ID
-      goal: 3000,
+      goal: fundData.goal,
       title: fundData.title,
       description: fundData.description,
       start_date: new Date(fundData.startDate).toISOString(),
