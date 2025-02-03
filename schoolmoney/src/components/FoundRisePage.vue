@@ -297,7 +297,6 @@ export default {
       this.showDepositModal = false;
       // Logika przelewu (np. wysłanie zapytania do API)
       console.log(`Przelew na kwotę ${this.amount} zł został pomyślnie wykonany!`);
-
       // Po udanym przelewie, zamknij oba modale
 
     },
