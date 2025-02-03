@@ -16,7 +16,8 @@ from auth import verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_tok
 from models import *
 from schemas import Token, UserResponse, UserCreate, LoginRequest, ChildResponse, ChildCreate, ClassResponse, \
     ClassCreate, ChildModify, ClassModify, AddChildToClass, CollectionResponse, CollectionCreate, AccountResponse, \
-    FinancialTransactionCreate, FinancialTransactionResponse, ProcessInviteRequest, CreateInviteRequest
+    FinancialTransactionCreate, FinancialTransactionResponse, ProcessInviteRequest, CreateInviteRequest, \
+    CollectionModify
 
 app = FastAPI(debug=True)
 scheduler = BackgroundScheduler()
@@ -389,6 +390,51 @@ def create_collection(
         creator_id=collection.creator_id,
         account=AccountResponse.from_orm(account)  # Return AccountResponse instead of plain account
     )
+
+@app.put("/modify_collection/{collection_id}", responseModel=CollectionResponse)
+def modify_collection(
+    collection_id: int,
+    data: CollectionModify,
+    db: Session = Depends(get_db),
+    current_user : User = Depends(get_current_user)
+
+):
+    # Fetch the collection by ID
+    collection = db.query(Collection).filter(Collection.id == collection_id).first()
+
+    # Check if the collection exists
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    class_ = db.query(Class).filter(Class.id == collection_id).first()
+
+    if not class_ or class_.treasurer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to modify this collection")
+
+
+
+    # Update only the fields provided in the request
+    if data.goal is not None:
+        collection.goal = data.goal
+    if data.title is not None:
+        collection.title = data.title
+    if data.description is not None:
+        collection.description = data.description
+    if data.end_date is not None:
+        if data.end_date > collection.end_date:
+            collection.end_date = data.end_date
+        else:
+            raise HTTPException(status_code=402,detail="End date cannot be earlier than current end date")
+
+    # Commit the changes
+    db.commit()
+    db.refresh(collection)
+
+    # Return the updated collection
+    return collection
+
+
+
 
 @app.get("/get_children_in_class/{class_id}", response_model=List[ChildResponse])
 def get_children_in_class(

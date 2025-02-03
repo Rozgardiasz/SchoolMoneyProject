@@ -127,6 +127,11 @@ class CollectionCreate(BaseModel):
         from_attributes = True
 
 
+class CollectionModify(BaseModel):
+    goal : float|None = None
+    title : str|None = None
+    description :str|None = None
+    end_date : datetime|None = None
 
 
 # Response schema to return created collection
