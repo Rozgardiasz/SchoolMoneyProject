@@ -180,155 +180,133 @@
 </template>
 
 <script>
-import { useRouter } from "vue-router";
-import { ref, onMounted } from "vue";
 import { fetchChildren, addChild, updateChild, deleteChildApi } from "@/api/children";
-import { getToken } from "@/api/auth";
-import {
-  getUserFirstName,
-  getUserLastName,
-  getUserEmail,
-  getAccountNumber,
-  getAccountBalance
-} from "@/api/user";
+import { getToken, logoutUser } from "@/api/auth";
+import { getUserFirstName, getUserLastName, getUserEmail, getAccountNumber, getAccountBalance } from "@/api/user";
 
 export default {
-  setup() {
-    const router = useRouter();
-    const token = getToken();
-
-    const firstName = ref(getUserFirstName());
-    const lastName = ref(getUserLastName());
-    const email = ref(getUserEmail());
-    const accountNumber = ref(getAccountNumber());
-    const accountBalance = ref(getAccountBalance());
-
-    const children = ref([]);
-    const showAddChildModal = ref(false);
-    const showEditProfileModal = ref(false);
-    const showEditChildModal = ref(false);
-
-    const firstNameField = ref('');
-    const lastNameField = ref('');
-    const birthDateField = ref('');
-    const avatarField = ref('');
-    const errorMessage = ref('');
-
-    // Pola dla edycji profilu
-    const editFirstName = ref(firstName.value);
-    const editLastName = ref(lastName.value);
-    const editEmail = ref(email.value);
-
-    // Pola dla edycji dziecka
-    const childToEditIndex = ref(null);
-    const childToEditId = ref(null);
-    const editChildFirstName = ref('');
-    const editChildLastName = ref('');
-    const editChildBirthDate = ref(''); // dodajemy pole na datę urodzenia
-
-    const fetchChildrenData = async () => {
-      try {
-        children.value = await fetchChildren(token);
-      } catch (error) {
-        // Obsługa błędu w razie potrzeby
-      }
-    };
-
-    const addNewChild = async () => {
-      try {
-        const newChild = await addChild(token, firstNameField.value, lastNameField.value, birthDateField.value, avatarField.value);
-        children.value.push(newChild);
-        resetForm();
-        showAddChildModal.value = false;
-      } catch (error) {
-        errorMessage.value = error.message;
-      }
-    };
-
-    const resetForm = () => {
-      firstNameField.value = '';
-      lastNameField.value = '';
-      birthDateField.value = '';
-      avatarField.value = '';
-    };
-
-    const confirmEditProfile = () => {
-      // Logika wysyłania zmian profilu
-      showEditProfileModal.value = false;
-    };
-
-    // Otwieranie modalu edycji dziecka i inicjalizacja pól
-    const openEditChildModal = (child, index) => {
-      childToEditIndex.value = index;
-      childToEditId.value = child.id;
-      editChildFirstName.value = child.first_name;
-      editChildLastName.value = child.last_name;
-      editChildBirthDate.value = child.birth_date; // zapisujemy oryginalną datę urodzenia
-      showEditChildModal.value = true;
-    };
-
-    // Potwierdzanie edycji dziecka poprzez wysłanie żądania update
-    const confirmEditChild = async () => {
-      try {
-        await updateChild(token, childToEditId.value, editChildFirstName.value, editChildLastName.value, editChildBirthDate.value);
-        if (childToEditIndex.value !== null) {
-          children.value[childToEditIndex.value].first_name = editChildFirstName.value;
-          children.value[childToEditIndex.value].last_name = editChildLastName.value;
-          // zachowujemy oryginalną datę urodzenia
-        }
-        childToEditIndex.value = null;
-        childToEditId.value = null;
-        showEditChildModal.value = false;
-      } catch (error) {
-        // Obsługa błędu w razie potrzeby
-      }
-    };
-
-    // Usuwanie dziecka poprzez wysłanie żądania DELETE
-    const handleDeleteChild = async (childId, index) => {
-      try {
-        await deleteChildApi(token, childId);
-        children.value.splice(index, 1);
-      } catch (error) {
-        // Obsługa błędu w razie potrzeby
-      }
-    };
-
-    const moveToHome = () => {
-      router.push("/Home");
-    };
-
-    onMounted(() => {
-      fetchChildrenData();
-    });
-
+  data() {
     return {
-      firstName,
-      lastName,
-      email,
-      accountNumber,
-      accountBalance,
-      children,
-      showAddChildModal,
-      showEditProfileModal,
-      showEditChildModal,
-      firstNameField,
-      lastNameField,
-      birthDateField,
-      avatarField,
-      errorMessage,
-      editFirstName,
-      editLastName,
-      editEmail,
-      editChildFirstName,
-      editChildLastName,
-      addNewChild,
-      confirmEditProfile,
-      openEditChildModal,
-      confirmEditChild,
-      handleDeleteChild,
-      moveToHome,
+      firstName: getUserFirstName(),
+      lastName: getUserLastName(),
+      email: getUserEmail(),
+      accountNumber: getAccountNumber(),
+      accountBalance: getAccountBalance(),
+      children: [],
+      showAddChildModal: false,
+      showEditProfileModal: false,
+      showEditChildModal: false,
+      firstNameField: '',
+      lastNameField: '',
+      birthDateField: '',
+      avatarField: '',
+      errorMessage: '',
+      editFirstName: getUserFirstName(),
+      editLastName: getUserLastName(),
+      editEmail: getUserEmail(),
+      childToEditIndex: null,
+      childToEditId: null,
+      editChildFirstName: '',
+      editChildLastName: '',
+      editChildBirthDate: '',
     };
   },
+
+  methods: {
+    async fetchChildrenData() {
+      try {
+        const token = getToken();
+        if (!token) {
+          await logoutUser();
+          this.$router.replace("/"); // Zamiana push() na replace() dla bezpieczeństwa
+          return; // Zatrzymujemy dalsze wykonywanie kodu
+        }
+        this.children = await fetchChildren(token);
+      } catch (error) {
+        console.error("Błąd podczas pobierania danych dzieci:", error);
+      }
+    },
+
+    async addNewChild() {
+      try {
+        const token = getToken();
+        if (!token) {
+          await logoutUser();
+          this.$router.replace("/");
+          return;
+        }
+        const newChild = await addChild(token, this.firstNameField, this.lastNameField, this.birthDateField, this.avatarField);
+        this.children.push(newChild);
+        this.resetForm();
+        this.showAddChildModal = false;
+      } catch (error) {
+        this.errorMessage = error.message;
+      }
+    },
+
+    resetForm() {
+      this.firstNameField = '';
+      this.lastNameField = '';
+      this.birthDateField = '';
+      this.avatarField = '';
+    },
+
+    confirmEditProfile() {
+      this.showEditProfileModal = false;
+    },
+
+    openEditChildModal(child, index) {
+      this.childToEditIndex = index;
+      this.childToEditId = child.id;
+      this.editChildFirstName = child.first_name;
+      this.editChildLastName = child.last_name;
+      this.editChildBirthDate = child.birth_date;
+      this.showEditChildModal = true;
+    },
+
+    async confirmEditChild() {
+      try {
+        const token = getToken();
+        if (!token) {
+          await logoutUser();
+          this.$router.replace("/");
+          return;
+        }
+        await updateChild(token, this.childToEditId, this.editChildFirstName, this.editChildLastName, this.editChildBirthDate);
+        if (this.childToEditIndex !== null) {
+          this.children[this.childToEditIndex].first_name = this.editChildFirstName;
+          this.children[this.childToEditIndex].last_name = this.editChildLastName;
+        }
+        this.childToEditIndex = null;
+        this.childToEditId = null;
+        this.showEditChildModal = false;
+      } catch (error) {
+        console.error("Błąd podczas edycji dziecka:", error);
+      }
+    },
+
+    async handleDeleteChild(childId, index) {
+      try {
+        const token = getToken();
+        if (!token) {
+          await logoutUser();
+          this.$router.replace("/");
+          return;
+        }
+        await deleteChildApi(token, childId);
+        this.children.splice(index, 1);
+      } catch (error) {
+        console.error("Błąd podczas usuwania dziecka:", error);
+      }
+    },
+
+    moveToHome() {
+      this.$router.push("/Home");
+    }
+  },
+
+  async created() {
+    await this.fetchChildrenData(); // Upewniamy się, że this jest używane poprawnie
+  }
 };
 </script>

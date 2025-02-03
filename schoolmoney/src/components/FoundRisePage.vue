@@ -16,8 +16,111 @@
         </svg>
       </div>
 
-    <!-- Formularz edycji zbiórki -->
-    <div v-if="showEditForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+
+
+  
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
+        <!-- Informacje o zbiórce -->
+        <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
+          <img class="w-full h-64 object-cover rounded-lg" :src="parsedCollection.image" alt="Obrazek zbiórki" />
+            
+          <div class="mt-6 flex space-x-4">
+          <button @click="openEditForm" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 flex items-center">
+            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19h2M4 10l5.5 5.5L20 5" />
+            </svg>
+            Edytuj zbiórkę
+          </button>
+  
+            <button @click="endFoundRise" class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 flex items-center">
+              <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Zakończ zbiórkę
+            </button>
+          </div>
+
+          <h1 class="text-3xl font-bold mt-4">{{ parsedCollection.title }}</h1>
+          <p class="text-gray-600 mt-2">Cel: {{ parsedCollection.goal }} zł</p>
+  
+          <!-- Daty z ikonkami -->
+          <div class="mt-2 flex items-center text-gray-500">
+            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V9H3v10a2 2 0 002 2z" />
+            </svg>
+            <p>Rozpoczęcie: {{ formattedStartDate }}</p>
+          </div>
+  
+          <div class="text-gray-500 flex items-center">
+            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V9H3v10a2 2 0 002 2z" />
+            </svg>
+            <p>Zakończenie: {{ formattedEndDate }}</p>
+          </div>
+  
+          <!-- Status -->
+          <p class="mt-4">
+            Status: <span :class="statusClass">{{ parsedCollection.status }}</span>
+          </p>
+  
+          <p class="mt-4 text-gray-700">{{ parsedCollection.description }}</p>
+  
+        </div>
+  
+        <!-- Komponent z listą członków klasy -->
+        <div class="bg-white p-6 rounded-lg shadow-md md:col-span-1">
+          <h2 class="text-xl font-semibold mb-4">Lista członków</h2>
+          <ul class="space-y-3">
+            <li v-for="member in members" :key="member.id" class="p-2 bg-gray-100 rounded-lg shadow-sm flex items-center gap-4">
+              <img class="w-10 h-10 rounded-full" :src="member.avatar" alt="Avatar" />
+              <span>{{ member.name }}</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+    <!-- Historia transakcji jako graf -->
+    <div class="bg-white p-6 mt-6 rounded-lg shadow-md overflow-x-auto max-w-full md:col-span-2">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Historia transakcji</h2>
+
+        <!-- Przycisk po prawej stronie -->
+        <div class="flex space-x-4">
+          <button @click="openDepositModal" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600">
+            Wpłać
+          </button>
+          <button class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600">
+            Wygeneruj raport
+          </button>
+        </div>
+      </div>
+
+  <div class="relative border-t-4 border-orange-500 pt-6 flex space-x-6">
+    <div
+      v-for="(transaction, index) in transactions"
+      :key="transaction.id"
+      class="relative flex flex-col items-center"
+    >
+      <div
+        class="w-6 h-6 rounded-full flex items-center justify-center"
+        :class="transaction.type === 'zamknięcie' ? 'bg-blue-500' : 'bg-orange-500'"
+      ></div>
+      <div class="text-center mt-2">
+        <p class="font-semibold" :class="transaction.type === 'zamknięcie' ? 'text-blue-600' : 'text-gray-800'">
+          {{ transaction.name }}
+        </p>
+        <p class="text-sm text-gray-500">{{ transaction.date }}</p>
+        <p class="text-md text-gray-700 font-bold">{{ transaction.amount }} zł</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+          <!-- Formularz edycji zbiórki -->
+          <div v-if="showEditForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white p-6 rounded-lg shadow-md w-96">
         <h2 class="text-2xl font-bold mb-4">Edytuj zbiórkę</h2>
         <label class="block text-gray-700">Tytuł</label>
@@ -41,107 +144,74 @@
         </div>
       </div>
     </div>
-  
-      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
-        <!-- Informacje o zbiórce -->
-        <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-          <img class="w-full h-64 object-cover rounded-lg" :src="parsedCollection.image" alt="Obrazek zbiórki" />
-            
-          <div class="mt-6 flex space-x-4">
-          <button @click="openEditForm" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 flex items-center">
-            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19h2M4 10l5.5 5.5L20 5" />
-            </svg>
-            Edytuj zbiórkę
-          </button>
-  
-            <button @click="endFoundRise" class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 flex items-center">
-              <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Zakończ zbiórkę
-            </button>
-          </div>
+<!-- Modal do wprowadzenia danych przelewu -->
+<div v-if="showDepositModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white p-6 rounded-lg shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-4">Wpłać na zbiórkę</h2>
+    
+    <!-- Tytuł przelewu -->
+    <label class="block text-gray-700">Tytuł przelewu</label>
+    <input v-model="title" class="w-full p-2 border rounded-lg mb-3" type="text" />
 
-          <h1 class="text-3xl font-bold mt-4">{{ parsedCollection.name }}</h1>
-          <p class="text-gray-600 mt-2">Cel: {{ parsedCollection.goal }} zł</p>
-  
-          <!-- Daty z ikonkami -->
-          <div class="mt-2 flex items-center text-gray-500">
-            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V9H3v10a2 2 0 002 2z" />
-            </svg>
-            <p>Rozpoczęcie: {{ parsedCollection.startDate }}</p>
-          </div>
-  
-          <div class="text-gray-500 flex items-center">
-            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V9H3v10a2 2 0 002 2z" />
-            </svg>
-            <p>Zakończenie: {{ parsedCollection.endDate }}</p>
-          </div>
-  
-          <!-- Status -->
-          <p class="mt-4">
-            Status: <span :class="statusClass">{{ parsedCollection.status }}</span>
-          </p>
-  
-          <p class="mt-4 text-gray-700">{{ parsedCollection.description }}</p>
-  
-        </div>
-  
-        <!-- Komponent z listą członków klasy -->
-        <div class="bg-white p-6 rounded-lg shadow-md md:col-span-1">
-          <h2 class="text-xl font-semibold mb-4">Lista członków</h2>
-          <ul class="space-y-3">
-            <li v-for="member in members" :key="member.id" class="p-2 bg-gray-100 rounded-lg shadow-sm flex items-center gap-4">
-              <img class="w-10 h-10 rounded-full" :src="member.avatar" alt="Avatar" />
-              <span>{{ member.name }}</span>
-            </li>
-          </ul>
-        </div>
+    <!-- Opis przelewu -->
+    <label class="block text-gray-700">Opis przelewu</label>
+    <textarea v-model="description" class="w-full p-2 border rounded-lg mb-3"></textarea>
 
+    <!-- Wybór dziecka -->
+    <label class="block mb-2">Wybierz dziecko</label>
+    <select v-model="selectedChild" class="w-full p-2 border rounded mb-3">
+      <option v-for="child in childrenList" :key="child.id" :value="child.id">
+        {{ child.first_name }} {{ child.last_name }}
+      </option>
+    </select>
 
-          <!-- Historia transakcji jako graf -->
-  <div class="bg-white p-6 rounded-lg shadow-md overflow-y-auto max-h-96 md:col-span-2">
-        <h2 class="text-xl font-semibold mb-4">Historia transakcji</h2>
-        <div class="relative border-l-4 border-orange-500 pl-6">
-          <div
-            v-for="(transaction, index) in transactions"
-            :key="transaction.id"
-            class="relative mb-6"
-          >
-            <div
-              class="absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center"
-              :class="transaction.type === 'zamknięcie' ? 'bg-blue-500' : 'bg-orange-500'"
-            ></div>
-            <div>
-              <p class="font-semibold" :class="transaction.type === 'zamknięcie' ? 'text-blue-600' : 'text-gray-800'">
-                {{ transaction.name }}
-              </p>
-              <p class="text-sm text-gray-500">{{ transaction.date }}</p>
-              <p class="text-md text-gray-700 font-bold">{{ transaction.amount }} zł</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Kwota przelewu -->
+    <label class="block text-gray-700">Kwota przelewu</label>
+    <input v-model="amount" class="w-full p-2 border rounded-lg mb-3" type="number" step="0.01" min="0" />
 
-
-
-
-      </div>
+    <!-- Przyciski -->
+    <div class="flex justify-between mt-4">
+      <button @click="confirmDeposit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
+      <button @click="closeDepositModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
     </div>
+  </div>
+</div>
+
+
+<!-- Modal potwierdzenia przelewu -->
+<div v-if="showConfirmModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white p-6 rounded-lg shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-4">Potwierdzenie przelewu</h2>
+    <p>Czy na pewno chcesz przelać {{ amount }} zł na zbiórkę?</p>
+    
+    <!-- Przyciski -->
+    <div class="flex justify-between mt-4">
+      <button @click="finalizeDeposit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
+      <button @click="closeConfirmModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
+    </div>
+  </div>
+</div>
+
+  </div>
 </template>
 
 <script>
 import { fetchStudentsInClass } from "@/api/classes";
-import { getToken } from '@/api/auth'; // Pobieramy token z auth.js
+import { fetchChildren } from "@/api/children";
+import { getToken } from '@/api/auth';
 
 export default {
   props: ["collection"],
   data() {
     return {
       showEditForm: false,
+      showDepositModal: false,  
+      titleTransfer: "", 
+      descriptionTransfer: "", 
+      selectedChild: null,
+      childrenList: [], 
+      amount: null,
+      showConfirmModal: false,
       parsedCollection: null,
       members: [],
       transactions: [
@@ -149,10 +219,17 @@ export default {
         { id: 2, name: "Amelka Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
         { id: 3, name: "Justyna Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
         { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
+        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" }
       ],
     };
   },
   computed: {
+    formattedStartDate() {
+      return this.formatDate(this.parsedCollection?.start_date);
+    },
+    formattedEndDate() {
+      return this.formatDate(this.parsedCollection?.end_date);
+    },
     statusClass() {
       return this.parsedCollection?.status === "Aktywna" ? "text-green-500 font-semibold" : "font-semibold";
     },
@@ -168,6 +245,11 @@ export default {
     }
   },
   methods: {
+    formatDate(dateString) {
+      if (!dateString) return "Brak daty";
+      const date = new Date(dateString);
+      return date.toLocaleDateString("pl-PL"); // Format DD.MM.YYYY
+    },
     async loadClassMembers() {
       try {
         const { class_id } = this.parsedCollection || {};
@@ -187,7 +269,7 @@ export default {
     openEditForm() {
       this.showEditForm = true;
       this.editFund = {
-        title: this.parsedCollection.name,
+        title: this.parsedCollection.title,
         description: this.parsedCollection.description,
         goal: this.parsedCollection.goal,
         startDate: this.parsedCollection.startDate,
@@ -201,6 +283,51 @@ export default {
     endFoundRise() {
       console.log("Zbiórka zakończona.");
     },
+    async openDepositModal() {
+      this.showDepositModal = true;
+      const token = getToken();
+      this.childrenList = await fetchChildren(token);
+    },
+    closeDepositModal() {
+      this.showDepositModal = false;
+    },
+    closeConfirmModal() {
+      this.showConfirmModal = false;
+      this.showDepositModal = true;
+    },
+    confirmDeposit() {
+      if (this.amount <= 0) {
+        alert("Kwota musi być większa niż 0!");
+        return;
+      }
+      this.showConfirmModal = true;
+      this.showDepositModal = false;
+    },
+    finalizeDeposit() {
+      this.showConfirmModal = false;
+      this.showDepositModal = false;
+      // Logika przelewu (np. wysłanie zapytania do API)
+      console.log(`Przelew na kwotę ${this.amount} zł został pomyślnie wykonany!`);
+      // Po udanym przelewie, zamknij oba modale
+
+    },
+    
+    makeDeposit() {
+      // Logika wpłaty
+      console.log(`Wpłacono ${this.amount} zł na konto dziecka ${this.selectedChild}`);
+      this.transactions.push({
+        id: Date.now(),
+        name: `Wpłata na konto dziecka ${this.selectedChild}`,
+        amount: this.amount,
+        date: new Date().toLocaleDateString(),
+        type: "wpłata"
+      });
+      this.showConfirmModal = false;
+    },
+    cancelDeposit() {
+      this.showConfirmModal = false;
+      this.showDepositModal = true;
+    }
   },
 };
 </script>

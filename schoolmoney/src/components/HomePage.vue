@@ -3,13 +3,16 @@
     <div class="w-11/12 md:w-11/12 lg:w-8/12 bg-white shadow-lg rounded-2xl p-6">
       <div class="top-1 right-1 flex gap-4">
         <button
-          class="px-4 py-2 bg-blue-500 text-white rounded-xl shadow hover:bg-blue-600"
+          class="px-4 py-2 bg-green-500 text-white rounded-xl shadow hover:bg-green-600"
           @click="showModal = true"
         >
           Dodaj klasę
         </button>
-        <button class="px-4 py-2 bg-green-500 text-white rounded-xl shadow hover:bg-green-600">
-          Dodaj dziecko do klasy
+        <button
+          class="px-4 py-2 bg-blue-500 text-white rounded-xl shadow hover:bg-blue-600"
+          @click="showInfoModal = true"
+        >
+          ℹ️
         </button>
       </div>
       <h1 class="text-xl font-semibold text-center mb-4">Lista klas</h1>
@@ -96,14 +99,33 @@
           </div>
         </div>
       </div>
+
+
+            <!-- Modal informacji -->
+            <div v-if="showInfoModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-10/12 md:w-6/12 lg:w-4/12">
+          <h2 class="text-lg font-semibold mb-4">Czym jest klasa?</h2>
+          <p class="text-gray-700">Klasa to wirtualna reprezentacja rzeczywistej klasy. Jej twórca automatycznie zostaje skarbnikiem. Klasa umożliwia organizowanie zbiórek oraz monitorowanie aktualnego stanu zebranych składek.</p>
+          <br>
+          <h2 class="text-lg font-semibold mb-4">Jak dodać dziecko do klasy?</h2>
+          <p class="text-gray-700">Aby dodać dziecko do klasy, skontaktuj się ze skarbnikiem danej klasy i poproś o wygenerowanie linku z zaproszeniem.</p>
+          <br>
+          <div class="mt-4 flex justify-end">
+            <button class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400" @click="showInfoModal = false">Zamknij</button>
+          </div>
+        </div>
+      </div>
+
+
     </div>
   </div>
 </template>
 
 <script>
 import { fetchClasses, createClass, changeClassName } from "@/api/classes";
-import { getToken } from "@/api/auth";
+import { getToken, logoutUser } from "@/api/auth";
 import { getUserId } from "@/api/user";
+
 
 export default {
   name: "Home",
@@ -111,22 +133,32 @@ export default {
     return {
       classes: [],
       showModal: false,
+      showInfoModal: false,
       className: "",
       errorMessage: "",
-      userId: null, // ID aktualnego użytkownika
+      userId: null, 
       isEditing: false,
-      currentClassId: null, // ID klasy, która jest edytowana
+      currentClassId: null, 
     };
   },
   async created() {
-    this.userId = getUserId(); // Pobierz ID użytkownika
-    await this.loadClasses(); // Załaduj listę klas
+
+    this.userId = getUserId();
+    await this.loadClasses();
   },
   methods: {
+    handleAuthError(error) {
+      if (error.response && error.response.status === 401) {
+        logoutUser();
+        this.$router.push("/");
+      }
+    },
     async loadClasses() {
       try {
         const token = getToken();
         if (!token) {
+          logoutUser();
+          this.$router.push("/");
           throw new Error("Brak tokenu autoryzacyjnego");
         }
 
@@ -134,6 +166,7 @@ export default {
         this.classes = classesData;
       } catch (error) {
         console.error("Błąd podczas ładowania klas:", error);
+        this.handleAuthError(error);
       }
     },
     async handleAddClass() {
@@ -145,6 +178,8 @@ export default {
       try {
         const token = getToken();
         if (!token) {
+          logoutUser();
+          this.$router.push("/");
           throw new Error("Brak tokenu autoryzacyjnego");
         }
 
@@ -155,6 +190,7 @@ export default {
         this.closeModal();
       } catch (error) {
         console.error("Błąd podczas dodawania klasy:", error);
+        this.handleAuthError(error);
       }
     },
     async handleEditClass() {
@@ -166,6 +202,8 @@ export default {
       try {
         const token = getToken();
         if (!token) {
+          logoutUser();
+          this.$router.push("/");
           throw new Error("Brak tokenu autoryzacyjnego");
         }
 
@@ -178,6 +216,7 @@ export default {
         this.closeModal();
       } catch (error) {
         console.error("Błąd podczas zmiany nazwy klasy:", error);
+        this.handleAuthError(error);
       }
 
       this.closeModal();

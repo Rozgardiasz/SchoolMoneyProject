@@ -15,7 +15,7 @@
 
       <div v-if="classItem" class="text-left">
         <h1 class="ml-7 text-3xl font-bold ">{{ classItem.name }}</h1>
-        <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurerName }}</h2>
+        <h2 class="text-xl text-gray-600">Skarbnik: {{ classItem.treasurer_id }}</h2>
       </div>
     </div>
 
@@ -27,14 +27,13 @@
         <div v-if="classItem" class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Uczniowie</h2>
           <button
-            @click="AddStudent(classItem.id)"
-            class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
+          v-if="isTreasurer"
+          @click="showLinkModal = true; generateLink()"
+          class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
           >
-            Dodaj ucznia
+            Generuj zaproszenie
           </button>
       </div>
-  
-
           <ul class="space-y-3">
             <li
               v-for="member in members"
@@ -51,6 +50,34 @@
           </ul>
         </div>
   
+        <div v-if="showLinkModal"
+          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div class="bg-white p-6 rounded-lg shadow-lg w-10/12 md:w-6/12 lg:w-4/12">
+            <h2 class="text-lg font-semibold mb-4">Twój link:</h2>
+            <div class="flex items-center border rounded-lg p-2">
+              <input
+                v-model="generatedLink"
+                readonly
+                class="w-full bg-transparent focus:outline-none"
+              />
+              <button
+                @click="copyToClipboard"
+                class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 ml-2"
+              >
+                Kopiuj
+              </button>
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button
+                class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+                @click="showLinkModal = false"
+              >
+                Zamknij
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div v-if="showInviteForm" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
           <div class="bg-white p-6 rounded-lg shadow-lg w-96">
             <h2 class="text-xl font-semibold mb-4">Dodaj ucznia</h2>
@@ -160,10 +187,12 @@ import { fetchStudentsInClass } from "@/api/classes";
 import { fetchChildren, addChildToClass } from "@/api/children";
 import { getToken } from "@/api/auth";
 import { jwtDecode } from "jwt-decode";
-import { getClass } from "@/api/classes";
+import { getClass, getClassInvite } from "@/api/classes";
 export default {
   data() {
     return {
+      showLinkModal: false,
+      generatedLink: "",
       classItem: null,
       showCompleted: true,
       showAddForm: false,
@@ -219,7 +248,22 @@ export default {
   },
   methods: {
     // Assuming you have a method to fetch all classes (replace with your actual method)
+    async  generateLink() {
+        const token = await getToken();
+      
+        const classInvite = await getClassInvite(token, this.classItem.id)
 
+      const ip = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : "";
+      this.generatedLink = `http://${ip}${port}${classInvite}`;
+    },
+
+    copyToClipboard() {
+      navigator.clipboard.writeText(this.generatedLink)
+        .catch(err => {
+          console.error("Błąd kopiowania:", err);
+        });
+    },
 
     async loadClassFromId(classId) {
       try {
