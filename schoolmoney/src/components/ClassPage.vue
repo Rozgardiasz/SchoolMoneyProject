@@ -32,7 +32,6 @@
           >
             Dodaj ucznia
           </button>
-        </div>
       </div>
   
 
@@ -151,6 +150,8 @@
           </ul>
         </div>
       </div>
+    </div>
+
 </template>
 <script>
 import { getUserId } from "@/api/user";
@@ -325,12 +326,12 @@ export default {
 },
 
 
-    goToFoundrise(collection) {
+goToFoundrise(collection) {
       this.$router.push({
-        name: "FoundriseDetails",
-        params: { collectionId: collection.id },
+        name: "FoundRisePage",
+        params: { collection: JSON.stringify(collection) },
       });
-    },
+  },
   },
 };
 </script>
