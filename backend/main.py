@@ -260,6 +260,53 @@ def get_user_classes(db: Session = Depends(get_db), current_user: User = Depends
 def get_all_classes(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return db.query(Class).all()
 
+@app.get("/all_children_no_class", response_model=List[ChildResponse])
+def get_all_children_without_class_assigned(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Query all children where class_id is None
+    children = db.query(Child).filter(Child.class_id is None).all()
+    return children
+
+
+@app.post("/remove_child_from_class/{child_id}", response_model=ChildResponse)
+def remove_child_from_class(
+    child_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Fetch the child by ID
+    child = db.query(Child).filter(Child.id == child_id).first()
+
+    # Check if the child exists
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Check if the current user is the parent of the child
+    is_parent = child.parent_id == current_user.id
+
+    # Check if the current user is the treasurer of the class
+    is_treasurer = False
+    if child.class_id is not None:
+        class_ = db.query(Class).filter(Class.id == child.class_id).first()
+        if class_ and class_.treasurer_id == current_user.id:
+            is_treasurer = True
+
+    # Allow removal only if the user is the parent or the treasurer
+    if not is_parent and not is_treasurer:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to remove this child from the class"
+        )
+
+    # Remove the child from the class
+    child.class_id = None
+    db.commit()
+    db.refresh(child)
+
+    return child
+
 
 # NOTE this only modifies class name
 @app.put("/class/{class_id}", response_model=ClassResponse)
@@ -309,8 +356,8 @@ def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(ge
 
 @app.post("/add_child_to_class/")
 def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Validate if the child belongs to the current user
-    child = db.query(Child).filter(Child.id == params.child_id, Child.parent_id == current_user.id).first()
+    # get child
+    child = db.query(Child).filter(Child.id == params.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child does not belong to the current user")
 
@@ -318,6 +365,10 @@ def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), 
     class_ = db.query(Class).filter(Class.id == params.class_id).first()
     if not class_:
         raise HTTPException(status_code=404, detail="Class not found")
+
+    is_treasurer = current_user.id == db.query(Class).filter(params.class_id == Class.id).first().treasurer_id
+    if not is_treasurer:
+        raise HTTPException(status_code=404, detail="current user is not the class treasurer")
 
     # Assign the child to the class
     child.class_id = class_.id  # Set the class_id to link the child to the class
