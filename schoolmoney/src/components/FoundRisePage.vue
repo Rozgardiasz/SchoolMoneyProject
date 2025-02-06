@@ -133,10 +133,10 @@
         <input v-model="editFund.goal" class="w-full p-2 border rounded-lg mb-3" type="number" />
 
         <label class="block text-gray-700">Data rozpoczęcia</label>
-        <input v-model="editFund.startDate" class="w-full p-2 border rounded-lg mb-3" type="date" />
+        <input v-model="editFund.start_date" class="w-full p-2 border rounded-lg mb-3" type="date" />
 
         <label class="block text-gray-700">Data zakończenia</label>
-        <input v-model="editFund.endDate" class="w-full p-2 border rounded-lg mb-3" type="date" />
+        <input v-model="editFund.end_date" class="w-full p-2 border rounded-lg mb-3" type="date" />
 
         <div class="flex justify-between mt-4">
           <button @click="logEditData" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Zapisz zmiany</button>
@@ -199,6 +199,9 @@
 import { fetchStudentsInClass } from "@/api/classes";
 import { fetchChildren } from "@/api/children";
 import { getToken } from '@/api/auth';
+import { createPayment } from "@/api/foundrises";
+import {modifyCollection } from "@/api/foundrises";
+
 
 export default {
   props: ["collection"],
@@ -272,12 +275,16 @@ export default {
         title: this.parsedCollection.title,
         description: this.parsedCollection.description,
         goal: this.parsedCollection.goal,
-        startDate: this.parsedCollection.startDate,
-        endDate: this.parsedCollection.endDate,
+        start_date: this.parsedCollection.startDate,
+        end_date: this.parsedCollection.endDate,
       };
     },
     logEditData() {
+      
+      modifyCollection(this.parsedCollection.id, this.editFund)
       console.log("Nowe dane zbiórki:", this.editFund);
+
+
       this.showEditForm = false;
     },
     endFoundRise() {
@@ -314,6 +321,8 @@ export default {
     
     makeDeposit() {
       // Logika wpłaty
+      createPayment( , this.amount, this.descriptionTransfer, this.selectedChild.id)
+
       console.log(`Wpłacono ${this.amount} zł na konto dziecka ${this.selectedChild}`);
       this.transactions.push({
         id: Date.now(),
