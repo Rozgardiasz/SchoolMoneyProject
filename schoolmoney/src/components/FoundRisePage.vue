@@ -199,6 +199,7 @@
 import { fetchStudentsInClass } from "@/api/classes";
 import { fetchChildren } from "@/api/children";
 import { getToken } from '@/api/auth';
+import { createPayment } from "@/api/foundrises";
 
 export default {
   props: ["collection"],
@@ -314,6 +315,8 @@ export default {
     
     makeDeposit() {
       // Logika wpłaty
+      createPayment( , this.amount, this.descriptionTransfer, this.selectedChild.id)
+
       console.log(`Wpłacono ${this.amount} zł na konto dziecka ${this.selectedChild}`);
       this.transactions.push({
         id: Date.now(),
