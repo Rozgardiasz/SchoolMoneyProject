@@ -69,3 +69,21 @@ export async function fetchCollectionsInClass(classId) {
     return [];
   }
 }
+
+export async function modifyCollection(collectionId,fundEditData)
+{
+  try {
+    const token = getToken();
+    const response = await axios.put(
+      `${API_URL}/modify_collection/${collectionId}`,
+      fundEditData,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Błąd podczas pobierania zbiórek:", error);
+    return [];
+  }
+}

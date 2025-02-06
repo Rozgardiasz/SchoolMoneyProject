@@ -191,6 +191,7 @@ import { getClass, getClassInvite } from "@/api/classes";
 export default {
   data() {
     return {
+      goal: null,
       showLinkModal: false,
       generatedLink: "",
       classItem: null,
