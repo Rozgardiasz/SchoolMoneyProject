@@ -54,19 +54,44 @@ export async function createCollection(fundData) {
   }
 }
 
-export async function fetchCollectionsInClass(classId) {
+
+export async function createPayment(account_number, amount, description, child_id = 0) {
   try {
-    const token = getToken();
-    const response = await axios.get(
-      `${API_URL}/get_collections_in_class/${classId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
+    const token = getToken(); // Pobieramy token
+
+    if (!token) {
+      throw new Error("Brak tokena, użytkownik niezalogowany.");
+    }
+
+    // Tworzymy payload z danymi do wysłania w żądaniu
+    const payload = {
+      account_number, // Numer konta przekazany jako argument
+      amount, // Kwota płatności
+      description, // Opis płatności
+      child_id, // ID dziecka (domyślnie 0)
+    };
+
+    console.log("Wysyłane dane do API:", payload); // Debugging
+
+    // Wykonujemy zapytanie POST do odpowiedniego endpointa
+    const response = await fetch(`${API_URL}/create_payment/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Błąd API: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json(); // Zwracamy odpowiedź z serwera
   } catch (error) {
-    console.error("Błąd podczas pobierania zbiórek:", error);
-    return [];
+    console.error("Błąd przy tworzeniu płatności:", error);
+    throw error;
   }
 }
 
@@ -87,3 +112,4 @@ export async function modifyCollection(collectionId,fundEditData)
     return [];
   }
 }
+};
