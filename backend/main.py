@@ -406,7 +406,7 @@ def modify_collection(
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    class_ = db.query(Class).filter(Class.id == collection_id).first()
+    class_ = db.query(Class).filter(Class.id == collection.class_id).first()
 
     if not class_ or class_.treasurer_id != current_user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to modify this collection")
