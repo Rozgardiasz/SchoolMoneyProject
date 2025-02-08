@@ -113,7 +113,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     account_number = str(uuid.uuid4())  # Example: Unique identifier
     account = Account(
         account_number=account_number,
-        balance=100.0,  # Initial balance is set to 0
+        balance=100.0,  # Initial balance is set to 100
         parent_id=db_user.id  # Link the account to the newly created user
     )
 
@@ -546,6 +546,7 @@ def get_collections_in_class(
     children = db.query(Collection).filter(Collection.class_id == class_id).all()
 
     return children
+from decimal import Decimal
 
 @app.post("/deposit/{amount}", response_model=AccountResponse)
 def add_virtual_money_to_user_account(
@@ -553,6 +554,7 @@ def add_virtual_money_to_user_account(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    amount = Decimal(amount)
     # Validate the amount
     if amount <= 0:
         raise HTTPException(
@@ -628,6 +630,7 @@ def make_transfer(
         )
 
     # Ensure sufficient balance in the source account
+    data.amount = Decimal(data.amount)
     if current_user.account.balance < data.amount:
         raise HTTPException(
             status_code=400,
@@ -936,6 +939,129 @@ def process_invite(
 
     return {"message": "Invite successfully processed and child added to the class"}
 
+
+
+@app.post("/close_collection_early/{collection_id}", response_model=CollectionResponse)
+def close_collection_early(
+    collection_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check if the user is the creator of the collection
+    collection = db.query(Collection).filter(
+        Collection.id == collection_id,
+        Collection.creator_id == current_user.id
+    ).first()
+
+    if not collection:
+        raise HTTPException(
+            status_code=404,
+            detail="Collection not found or user is not the creator of this collection"
+        )
+
+    # Check if the collection has already ended
+    if collection.end_date <= datetime.date(datetime.utcnow()):
+        raise HTTPException(
+            status_code=400,
+            detail="The collection has already ended"
+        )
+
+    # End the collection early
+    collection.end_date = datetime.utcnow()
+
+    # Fetch all transactions related to this collection
+    transactions = db.query(FinancialTransaction).filter(
+        FinancialTransaction.destination_account_id == collection.account.id
+    ).all()
+
+    # Reverse all transactions
+    for transaction in transactions:
+        # Fetch the source account and the destination account
+        source_account = db.query(Account).filter(Account.id == transaction.source_account_id).first()
+        destination_account = db.query(Account).filter(Account.id == transaction.destination_account_id).first()
+
+        if not source_account or not destination_account:
+            continue  # Skip transactions with invalid accounts
+
+        # Reverse the transaction: refund the money to the original source account
+        source_account.balance += transaction.amount
+        destination_account.balance -= transaction.amount
+
+        # Create a reversing transaction record
+        reverse_transaction = FinancialTransaction(
+            source_account_id=transaction.destination_account_id,
+            destination_account_id=transaction.source_account_id,
+            amount=transaction.amount,
+            description=f"Reversal of transaction ID {transaction.id} due to early closure of collection",
+            child_id=transaction. child_id # No child associated with reversal
+        )
+        db.add(reverse_transaction)
+
+    # Commit the changes
+    db.commit()
+    db.refresh(collection)
+
+    return collection
+
+@app.post("/cancel_collection_transaction/{collection_id}", response_model=CollectionResponse)
+def cancel_collection_transaction(
+    collection_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    collection = db.query(Collection).filter(
+        Collection.id == collection_id,
+    ).first()
+
+    if not collection:
+        raise HTTPException(
+            status_code=404,
+            detail="Collection not found"
+        )
+
+    # Check if the collection has already ended
+    if collection.end_date <= datetime.date(datetime.utcnow()):
+        raise HTTPException(
+            status_code=400,
+            detail="The collection has already ended"
+        )
+
+
+
+    # Fetch all transactions related to this collection and current user
+    transactions = db.query(FinancialTransaction).filter(
+        FinancialTransaction.destination_account_id == collection.account.id,
+        FinancialTransaction.source_account_id == current_user.account.id
+    ).all()
+
+    # Reverse all transactions
+    for transaction in transactions:
+        # Fetch the source account and the destination account
+        source_account = db.query(Account).filter(Account.id == transaction.source_account_id).first()
+        destination_account = db.query(Account).filter(Account.id == transaction.destination_account_id).first()
+
+        if not source_account or not destination_account:
+            continue  # Skip transactions with invalid accounts
+
+        # Reverse the transaction: refund the money to the original source account
+        source_account.balance += transaction.amount
+        destination_account.balance -= transaction.amount
+
+        # Create a reversing transaction record
+        reverse_transaction = FinancialTransaction(
+            source_account_id=transaction.destination_account_id,
+            destination_account_id=transaction.source_account_id,
+            amount=transaction.amount,
+            description=f"Reversal of transaction ID {transaction.id} due to early closure of collection",
+            child_id=transaction. child_id # No child associated with reversal
+        )
+        db.add(reverse_transaction)
+
+    # Commit the changes
+    db.commit()
+    db.refresh(collection)
+
+    return collection
 
 if __name__ == "main":
 

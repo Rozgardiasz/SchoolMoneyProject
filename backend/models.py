@@ -8,6 +8,7 @@ from sqlalchemy import (
     Float,
     Text,
     DateTime,
+    Numeric,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -75,7 +76,7 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_number = Column(String, unique=True, nullable=False)  # Unique account number
-    balance = Column(Float, default=0.0)
+    balance = Column(Numeric(19,2), default=0.0)
 
     # Foreign keys
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Account owned by a parent
@@ -110,7 +111,7 @@ class FinancialTransaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     source_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)  # Account sending the funds
     destination_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)  # Account receiving the funds
-    amount = Column(Float, nullable=False)  # Transaction amount
+    amount = Column(Numeric(19,2), nullable=False)  # Transaction amount
     description = Column(Text, nullable=True)  # Optional description of the transaction
     timestamp = Column(DateTime, default=datetime.utcnow)
 
@@ -130,7 +131,7 @@ class Collection(Base):
     __tablename__ = "collections"
 
     id = Column(Integer, primary_key=True, index=True)
-    goal = Column(Float,nullable = False)
+    goal = Column(Numeric(19,2),nullable = False)
     title = Column(String, nullable=False)
     logo = Column(String, nullable=True)  # Path to logo image
     description = Column(Text, nullable=False)  # Description provided by the treasurer
