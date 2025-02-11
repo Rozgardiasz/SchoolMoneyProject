@@ -24,7 +24,7 @@
         <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
           <img class="w-full h-64 object-cover rounded-lg" :src="parsedCollection.image" alt="Obrazek zbiórki" />
             
-          <div class="mt-6 flex space-x-4" v-if="parsedCollection.status !== 'Zakończona'">
+          <div class="mt-6 flex space-x-4" v-if="parsedCollection.status !== 'Zakończona' && this.parsedCollection.creator_id == this.userId" >
           <button @click="openEditForm" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 flex items-center">
             <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19h2M4 10l5.5 5.5L20 5" />
@@ -203,7 +203,8 @@
 <script>
 import { fetchStudentsInClass  } from "@/api/classes";
 import { fetchChildren } from "@/api/children";
-import { getToken } from '@/api/auth';
+import { getToken} from '@/api/auth';
+import {getUserId} from '@/api/user';
 import { createPayment } from "@/api/foundrises";
 import {modifyCollection, fetchTransactionsForCollection, fetchCollectionById, closeCollectionEarly } from "@/api/foundrises";
 
@@ -222,9 +223,8 @@ export default {
       showConfirmModal: false,
       parsedCollection: null,
       members: [],
+      userId: null,
       transactions: [
-        // { id: 1, name: "Zamknięcie zbiórki", amount: 2500.0, date: "23.01.2025", type: "zamknięcie" },
-        // { id: 2, name: "Amelka Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
       ],
     };
   },
@@ -241,6 +241,8 @@ export default {
   },
   async created() {
   console.log("Props collection:", this.collection);
+  this.userId = getUserId();
+
   if (this.collection) {
     try {
       this.parsedCollection = JSON.parse(this.collection);
@@ -260,6 +262,7 @@ export default {
       console.error("Błąd parsowania collection:", error);
     }
   }
+
 },
 
 

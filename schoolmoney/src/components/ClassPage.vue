@@ -226,6 +226,8 @@ export default {
 },
 
   created() {
+    this.setCollectionStatuses();
+
     const classItemData = this.$route.params.classItem;
     const inviteToken = this.$route.query.token;
 
@@ -251,7 +253,6 @@ export default {
     this.userId = getUserId();
   },
   methods: {
-    // Assuming you have a method to fetch all classes (replace with your actual method)
 
 
     setCollectionStatuses() {
@@ -259,10 +260,10 @@ export default {
       const startDate = fundrise.start_date.split('T')[0];
       const endDate = fundrise.end_date.split('T')[0];
 
-      if (startDate === endDate) {
-        fundrise.status = 'Zakończona';  // Ustawiamy status na Zakończona
+      if (fundrise.start_date === fundrise.end_date) {
+        fundrise.status = 'Zakończona';  
       } else {
-        fundrise.status = 'Aktywna';  // Domyślny status to Aktywna
+        fundrise.status = 'Aktywna';  
       }
     });
     },

@@ -367,8 +367,6 @@ def add_child_to_class(params : AddChildToClass, db: Session = Depends(get_db), 
         raise HTTPException(status_code=404, detail="Class not found")
 
     is_treasurer = current_user.id == db.query(Class).filter(params.class_id == Class.id).first().treasurer_id
-    if not is_treasurer:
-        raise HTTPException(status_code=404, detail="current user is not the class treasurer")
 
     # Assign the child to the class
     child.class_id = class_.id  # Set the class_id to link the child to the class
