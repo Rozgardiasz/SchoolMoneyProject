@@ -24,7 +24,7 @@
         <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
           <img class="w-full h-64 object-cover rounded-lg" :src="parsedCollection.image" alt="Obrazek zbiórki" />
             
-          <div class="mt-6 flex space-x-4">
+          <div class="mt-6 flex space-x-4" v-if="parsedCollection.status !== 'Zakończona'">
           <button @click="openEditForm" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 flex items-center">
             <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19h2M4 10l5.5 5.5L20 5" />
@@ -41,7 +41,7 @@
           </div>
 
           <h1 class="text-3xl font-bold mt-4">{{ parsedCollection.title }}</h1>
-          <p class="text-gray-600 mt-2">Cel: {{ parsedCollection.goal }} zł</p>
+          <p class="text-gray-600 mt-2">{{ parsedCollection.account.balance }} / {{ parsedCollection.goal }} zł</p>
   
           <!-- Daty z ikonkami -->
           <div class="mt-2 flex items-center text-gray-500">
@@ -86,12 +86,9 @@
         <h2 class="text-xl font-semibold">Historia transakcji</h2>
 
         <!-- Przycisk po prawej stronie -->
-        <div class="flex space-x-4">
+        <div class="flex space-x-4" v-if="parsedCollection.status !== 'Zakończona'">
           <button @click="openDepositModal" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600">
             Wpłać
-          </button>
-          <button class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600">
-            Wygeneruj raport
           </button>
         </div>
       </div>
@@ -132,9 +129,6 @@
         <label class="block text-gray-700">Cel (zł)</label>
         <input v-model="editFund.goal" class="w-full p-2 border rounded-lg mb-3" type="number" />
 
-        <label class="block text-gray-700">Data rozpoczęcia</label>
-        <input v-model="editFund.start_date" class="w-full p-2 border rounded-lg mb-3" type="date" />
-
         <label class="block text-gray-700">Data zakończenia</label>
         <input v-model="editFund.end_date" class="w-full p-2 border rounded-lg mb-3" type="date" />
 
@@ -151,11 +145,7 @@
     
     <!-- Tytuł przelewu -->
     <label class="block text-gray-700">Tytuł przelewu</label>
-    <input v-model="title" class="w-full p-2 border rounded-lg mb-3" type="text" />
-
-    <!-- Opis przelewu -->
-    <label class="block text-gray-700">Opis przelewu</label>
-    <textarea v-model="description" class="w-full p-2 border rounded-lg mb-3"></textarea>
+    <input v-model="titleTransfer" class="w-full p-2 border rounded-lg mb-3" type="text" />
 
     <!-- Wybór dziecka -->
     <label class="block mb-2">Wybierz dziecko</label>
@@ -178,6 +168,21 @@
 </div>
 
 
+<!-- Modal potwierdzenia zakończenia zbiórki -->
+<div v-if="showEndModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white p-6 rounded-lg shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-4">Potwierdzenie zakończenia zbiórki</h2>
+    <p>Czy na pewno chcesz zakończyć tę zbiórkę?</p>
+
+    <!-- Przyciski -->
+    <div class="flex justify-between mt-4">
+      <button @click="confirmEndFundRise" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Zakończ</button>
+      <button @click="closeEndModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- Modal potwierdzenia przelewu -->
 <div v-if="showConfirmModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white p-6 rounded-lg shadow-md w-96">
@@ -186,7 +191,7 @@
     
     <!-- Przyciski -->
     <div class="flex justify-between mt-4">
-      <button @click="finalizeDeposit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
+      <button @click="makeDeposit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Wpłać</button>
       <button @click="closeConfirmModal" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Anuluj</button>
     </div>
   </div>
@@ -196,21 +201,21 @@
 </template>
 
 <script>
-import { fetchStudentsInClass } from "@/api/classes";
+import { fetchStudentsInClass  } from "@/api/classes";
 import { fetchChildren } from "@/api/children";
 import { getToken } from '@/api/auth';
 import { createPayment } from "@/api/foundrises";
-import {modifyCollection } from "@/api/foundrises";
+import {modifyCollection, fetchTransactionsForCollection, fetchCollectionById, closeCollectionEarly } from "@/api/foundrises";
 
 
 export default {
   props: ["collection"],
   data() {
     return {
+      showEndModal: false,
       showEditForm: false,
       showDepositModal: false,  
       titleTransfer: "", 
-      descriptionTransfer: "", 
       selectedChild: null,
       childrenList: [], 
       amount: null,
@@ -218,11 +223,8 @@ export default {
       parsedCollection: null,
       members: [],
       transactions: [
-        { id: 1, name: "Zamknięcie zbiórki", amount: 2500.0, date: "23.01.2025", type: "zamknięcie" },
-        { id: 2, name: "Amelka Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-        { id: 3, name: "Justyna Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" },
-        { id: 4, name: "Krystian Marciniak", amount: 312.5, date: "23.01.2025", type: "wpłata" }
+        // { id: 1, name: "Zamknięcie zbiórki", amount: 2500.0, date: "23.01.2025", type: "zamknięcie" },
+        // { id: 2, name: "Amelka Rogala", amount: 312.5, date: "23.01.2025", type: "wpłata" },
       ],
     };
   },
@@ -238,16 +240,44 @@ export default {
     },
   },
   async created() {
-    if (this.collection) {
-      try {
-        this.parsedCollection = JSON.parse(this.collection);
-        await this.loadClassMembers(); // Pobierz listę uczniów
-      } catch (error) {
-        console.error("Błąd parsowania collection:", error);
-      }
+  console.log("Props collection:", this.collection);
+  if (this.collection) {
+    try {
+      this.parsedCollection = JSON.parse(this.collection);
+      await this.updateParsedCollection(); // Pobierz najnowsze dane
+      await this.loadClassMembers(); // Pobierz listę uczniów
+
+      // Zaktualizuj status zbiórki na podstawie dat
+      this.setCollectionStatus();
+
+      this.transactions = (await fetchTransactionsForCollection(this.parsedCollection.id)).map(tx => ({
+        amount: tx.amount,
+        name: `${tx.first_name} ${tx.last_name}`,
+        date: this.formatDate(tx.timestamp),
+        type: "wpłata"
+      }));
+    } catch (error) {
+      console.error("Błąd parsowania collection:", error);
+    }
+  }
+},
+
+
+  methods: {
+
+
+    setCollectionStatus() {
+    if (!this.parsedCollection || !this.parsedCollection.start_date || !this.parsedCollection.end_date) return;
+    
+    const currentDate = new Date();
+    const endDate = new Date(this.parsedCollection.end_date);
+
+    if (currentDate > endDate) {
+      this.parsedCollection.status = 'Zakończona';
+    } else {
+      this.parsedCollection.status = 'Aktywna';
     }
   },
-  methods: {
     formatDate(dateString) {
       if (!dateString) return "Brak daty";
       const date = new Date(dateString);
@@ -275,21 +305,75 @@ export default {
         title: this.parsedCollection.title,
         description: this.parsedCollection.description,
         goal: this.parsedCollection.goal,
-        start_date: this.parsedCollection.startDate,
         end_date: this.parsedCollection.endDate,
       };
     },
     logEditData() {
-      
       modifyCollection(this.parsedCollection.id, this.editFund)
+      window.location.reload();
       console.log("Nowe dane zbiórki:", this.editFund);
 
 
       this.showEditForm = false;
     },
-    endFoundRise() {
-      console.log("Zbiórka zakończona.");
-    },
+    openEndModal() {
+    this.showEndModal = true;
+  },
+
+  // Metoda zamykająca modal potwierdzenia zakończenia zbiórki
+  closeEndModal() {
+    this.showEndModal = false;
+  },
+
+  // Metoda potwierdzająca zakończenie zbiórki
+  async confirmEndFundRise() {
+    try {
+      await this.closeFundRise();
+
+      this.showEndModal = false;
+
+    } catch (error) {
+      console.error("Błąd przy kończeniu zbiórki:", error);
+      alert("Wystąpił błąd przy zakończeniu zbiórki.");
+    }
+  },
+
+  // Funkcja, która wywoła API i zmieni status zbiórki
+  async closeFundRise() {
+    closeCollectionEarly(this.parsedCollection.id);
+    
+
+  },
+
+  // Otwórz modal po kliknięciu przycisku zakończenia zbiórki
+  endFoundRise() {
+    this.openEndModal();
+  },
+
+    async updateParsedCollection() {
+  if (!this.parsedCollection || !this.parsedCollection.class_id || !this.parsedCollection.id) {
+    console.error("Brak wymaganych danych do aktualizacji kolekcji.");
+    return;
+  }
+
+  try {
+    const updatedCollection = await fetchCollectionById(
+      this.parsedCollection.class_id,
+      this.parsedCollection.id
+    );
+
+    if (updatedCollection) {
+      this.parsedCollection = updatedCollection; // Nadpisujemy całą kolekcję
+    } else {
+      console.warn("Nie znaleziono kolekcji o podanym ID.");
+    }
+  } catch (error) {
+    console.error("Błąd podczas aktualizacji kolekcji:", error);
+  }
+},
+
+
+
     async openDepositModal() {
       this.showDepositModal = true;
       const token = getToken();
@@ -310,29 +394,22 @@ export default {
       this.showConfirmModal = true;
       this.showDepositModal = false;
     },
-    finalizeDeposit() {
+    makeDeposit() {
+
       this.showConfirmModal = false;
       this.showDepositModal = false;
-      // Logika przelewu (np. wysłanie zapytania do API)
-      console.log(`Przelew na kwotę ${this.amount} zł został pomyślnie wykonany!`);
-      // Po udanym przelewie, zamknij oba modale
+
+
+      createPayment(this.titleTransfer, this.parsedCollection.account.account_number, this.amount, this.selectedChild.id)
+      let current_balance = Number(getAccountBalance());  
+      let deposit_value = Number(this.amount);    
+
+      setAccountBalance(current_balance - deposit_value);
+      window.location.reload();
+     
 
     },
-    
-    makeDeposit() {
-      // Logika wpłaty
-      createPayment( , this.amount, this.descriptionTransfer, this.selectedChild.id)
 
-      console.log(`Wpłacono ${this.amount} zł na konto dziecka ${this.selectedChild}`);
-      this.transactions.push({
-        id: Date.now(),
-        name: `Wpłata na konto dziecka ${this.selectedChild}`,
-        amount: this.amount,
-        date: new Date().toLocaleDateString(),
-        type: "wpłata"
-      });
-      this.showConfirmModal = false;
-    },
     cancelDeposit() {
       this.showConfirmModal = false;
       this.showDepositModal = true;

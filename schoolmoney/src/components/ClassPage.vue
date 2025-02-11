@@ -191,6 +191,7 @@ import { getClass, getClassInvite } from "@/api/classes";
 export default {
   data() {
     return {
+      isClosed: false,
       goal: null,
       showLinkModal: false,
       generatedLink: "",
@@ -211,17 +212,19 @@ export default {
     };
   },
   computed: {
-    filteredCollections() {
-      return this.showCompleted
-        ? this.collections
-        : this.collections.filter(
-            (collection) => collection.status !== "Zakończona"
-          );
-    },
-    isTreasurer() {
-      return this.classItem && this.classItem.treasurer_id === this.userId;
-    },
+  filteredCollections() {
+    this.setCollectionStatuses();
+
+    return this.showCompleted
+      ? this.collections
+      : this.collections.filter(collection => collection.status !== 'Zakończona');
   },
+
+  isTreasurer() {
+    return this.classItem && this.classItem.treasurer_id === this.userId;
+  }
+},
+
   created() {
     const classItemData = this.$route.params.classItem;
     const inviteToken = this.$route.query.token;
@@ -249,6 +252,20 @@ export default {
   },
   methods: {
     // Assuming you have a method to fetch all classes (replace with your actual method)
+
+
+    setCollectionStatuses() {
+    this.collections.forEach(fundrise => {
+      const startDate = fundrise.start_date.split('T')[0];
+      const endDate = fundrise.end_date.split('T')[0];
+
+      if (startDate === endDate) {
+        fundrise.status = 'Zakończona';  // Ustawiamy status na Zakończona
+      } else {
+        fundrise.status = 'Aktywna';  // Domyślny status to Aktywna
+      }
+    });
+    },
     async  generateLink() {
         const token = await getToken();
       

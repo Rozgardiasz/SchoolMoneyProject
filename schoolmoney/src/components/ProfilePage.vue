@@ -54,6 +54,9 @@
       <button @click="showEditProfileModal = true" class="bg-green-500 text-white px-6 py-3 rounded-md text-lg hover:bg-green-600 transition">
         Edytuj profil
       </button>
+      <button @click="showDepositModal = true" class="bg-yellow-500 text-white ml-2 px-6 py-3 rounded-md text-lg hover:bg-yellow-600 transition">
+          Wpłać środki
+        </button>
     </div>
 
     <div class="add-child text-center mb-5">
@@ -158,6 +161,22 @@
       </div>
     </div>
 
+
+      <!-- Modal wpłaty środków -->
+      <div v-if="showDepositModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4 text-center">Wpłać środki</h2>
+        <div class="form-group mb-4">
+          <label for="depositAmount" class="block text-gray-700 font-semibold mb-2">Kwota</label>
+          <input v-model="depositAmount" id="depositAmount" type="number" min="1" class="w-full p-2 border border-gray-300 rounded-md text-gray-800" />
+        </div>
+        <div class="modal-actions flex justify-between mt-6">
+          <button @click="submitDeposit" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition">Wpłać</button>
+          <button @click="showDepositModal = false" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">Anuluj</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal edycji dziecka -->
     <div v-if="showEditChildModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -175,18 +194,31 @@
           <button @click="showEditChildModal = false" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">Anuluj</button>
         </div>
       </div>
+
+
+
+
+
+
+
     </div>
   </div>
 </template>
 
+
+
+
+
 <script>
 import { fetchChildren, addChild, updateChild, deleteChildApi } from "@/api/children";
 import { getToken, logoutUser } from "@/api/auth";
-import { getUserFirstName, getUserLastName, getUserEmail, getAccountNumber, getAccountBalance } from "@/api/user";
+import { getUserFirstName, getUserLastName, getUserEmail, getAccountNumber, getAccountBalance, depositAmount, setAccountBalance } from "@/api/user";
 
 export default {
   data() {
     return {
+      showDepositModal: false,
+      depositAmount: '',
       firstName: getUserFirstName(),
       lastName: getUserLastName(),
       email: getUserEmail(),
@@ -225,6 +257,24 @@ export default {
       } catch (error) {
         console.error("Błąd podczas pobierania danych dzieci:", error);
       }
+    },
+
+
+    submitDeposit() {
+    try {
+      depositAmount(this.depositAmount);
+      
+      let current_balance = Number(getAccountBalance());  
+      let deposit_value = Number(this.depositAmount);    
+
+      setAccountBalance(current_balance + deposit_value);
+      window.location.reload();
+
+    } catch {
+      console.error("Wystąpił problem ze wpłatą");
+    }
+
+      this.showDepositModal = false;
     },
 
     async addNewChild() {

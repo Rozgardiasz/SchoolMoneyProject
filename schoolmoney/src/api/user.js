@@ -64,7 +64,25 @@ export const setUserId = (id) => {
   };
 
 
-
+  export async function depositAmount(amount) {
+    const token = getToken();
+    try {
+      const response = await axios.post(
+        `http://localhost:8000/deposit/${amount}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Błąd podczas wpłaty środków:", error);
+      throw error;
+    }
+  }
+  
 
 
 export async function getUserById(id) {
