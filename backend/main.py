@@ -62,7 +62,7 @@ def transfer_funds_on_collection_end():
 
     for collection in collections_to_process:
         # Ensure the collection has funds
-        if collection.account.balance > 0:
+        if collection.account.balance >= 0:
             # Get the creator of the collection
             creator_account = db.query(Account).filter(Account.user_id == collection.creator_id).first()
 
